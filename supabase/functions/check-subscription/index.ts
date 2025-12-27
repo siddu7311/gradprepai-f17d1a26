@@ -72,6 +72,28 @@ serve(async (req) => {
       });
     }
 
+    // Check if user has moderator role in database (also gets Pro access)
+    const { data: userRole } = await supabaseClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ["admin", "moderator"])
+      .single();
+
+    if (userRole) {
+      logStep("User has special role, granting Pro access", { role: userRole.role });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        product_id: "role_pro",
+        subscription_end: null,
+        subscription_id: userRole.role,
+        is_admin: userRole.role === "admin"
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     // Regular subscription check via Stripe
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
