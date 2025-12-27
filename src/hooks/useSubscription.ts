@@ -34,8 +34,8 @@ export const useSubscription = () => {
   });
 
   const checkSubscription = useCallback(async () => {
-    if (!session?.access_token) {
-      setStatus(prev => ({ ...prev, loading: false }));
+    if (!user || !session?.access_token) {
+      setStatus(prev => ({ ...prev, loading: false, isAdmin: false }));
       return;
     }
 
@@ -67,7 +67,7 @@ export const useSubscription = () => {
         error: error instanceof Error ? error.message : 'Failed to check subscription',
       }));
     }
-  }, [session?.access_token]);
+  }, [user, session?.access_token]);
 
   const createCheckout = async () => {
     if (!session?.access_token) {

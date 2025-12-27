@@ -27,7 +27,7 @@ interface Profile {
 }
 
 const Admin = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: subLoading } = useSubscription();
   const navigate = useNavigate();
   
@@ -39,15 +39,18 @@ const Admin = () => {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (!subLoading && !user) {
+    // Wait for both auth and subscription to finish loading
+    if (authLoading || subLoading) return;
+    
+    if (!user) {
       navigate('/signin');
       return;
     }
-    if (!subLoading && user && !isAdmin) {
+    if (!isAdmin) {
       toast.error('Access denied. Admin privileges required.');
       navigate('/dashboard');
     }
-  }, [isAdmin, subLoading, user, navigate]);
+  }, [isAdmin, subLoading, authLoading, user, navigate]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -157,7 +160,7 @@ const Admin = () => {
     }
   };
 
-  if (subLoading || loading) {
+  if (authLoading || subLoading || loading) {
     return (
       <MainLayout>
         <div className="min-h-screen flex items-center justify-center">
