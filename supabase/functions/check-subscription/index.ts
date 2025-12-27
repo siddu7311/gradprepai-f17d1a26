@@ -26,10 +26,6 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
-
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
     logStep("Authorization header found");
@@ -41,12 +37,52 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Check if user is an admin (gets automatic Pro access)
+    const adminEmailsStr = Deno.env.get("ADMIN_EMAILS") || "";
+    const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase()).filter(e => e);
+    const isAdmin = adminEmails.includes(user.email.toLowerCase());
+    
+    if (isAdmin) {
+      logStep("User is admin, granting automatic Pro access", { email: user.email });
+      
+      // Also ensure they have admin role in database
+      const { data: existingRole } = await supabaseClient
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .single();
+      
+      if (!existingRole) {
+        await supabaseClient
+          .from("user_roles")
+          .upsert({ user_id: user.id, role: "admin" }, { onConflict: "user_id,role" });
+        logStep("Admin role added to database");
+      }
+
+      return new Response(JSON.stringify({
+        subscribed: true,
+        product_id: "admin_pro",
+        subscription_end: null,
+        subscription_id: "admin",
+        is_admin: true
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
+    // Regular subscription check via Stripe
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    logStep("Stripe key verified");
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {
       logStep("No customer found, returning unsubscribed state");
-      return new Response(JSON.stringify({ subscribed: false }), {
+      return new Response(JSON.stringify({ subscribed: false, is_admin: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
       });
@@ -80,7 +116,8 @@ serve(async (req) => {
       subscribed: hasActiveSub,
       product_id: productId,
       subscription_end: subscriptionEnd,
-      subscription_id: subscriptionId
+      subscription_id: subscriptionId,
+      is_admin: false
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

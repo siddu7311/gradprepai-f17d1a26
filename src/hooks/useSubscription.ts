@@ -9,6 +9,7 @@ export interface SubscriptionStatus {
   subscriptionId: string | null;
   loading: boolean;
   error: string | null;
+  isAdmin: boolean;
 }
 
 export const PLANS = {
@@ -29,6 +30,7 @@ export const useSubscription = () => {
     subscriptionId: null,
     loading: true,
     error: null,
+    isAdmin: false,
   });
 
   const checkSubscription = useCallback(async () => {
@@ -55,6 +57,7 @@ export const useSubscription = () => {
         subscriptionId: data.subscription_id || null,
         loading: false,
         error: null,
+        isAdmin: data.is_admin || false,
       });
     } catch (error) {
       console.error('Error checking subscription:', error);
@@ -113,6 +116,7 @@ export const useSubscription = () => {
         subscriptionId: null,
         loading: false,
         error: null,
+        isAdmin: false,
       });
     }
   }, [user, checkSubscription]);
@@ -130,6 +134,6 @@ export const useSubscription = () => {
     checkSubscription,
     createCheckout,
     openCustomerPortal,
-    isPro: status.subscribed && status.productId === PLANS.PRO.product_id,
+    isPro: status.subscribed && (status.productId === PLANS.PRO.product_id || status.isAdmin),
   };
 };
