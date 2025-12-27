@@ -19,7 +19,8 @@ import {
   User,
   CheckCircle2,
   Volume2,
-  Hash
+  Hash,
+  BarChart3
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -152,10 +153,19 @@ export default function InterviewSetup() {
                 <span>Back to Dashboard</span>
               </Link>
               
-              <Link to="/" className="flex items-center gap-2">
-                <Sparkles className="w-6 h-6 text-primary" />
-                <span className="font-display text-lg font-bold gradient-text">GradPrep AI</span>
-              </Link>
+              <div className="flex items-center gap-4">
+                <Link 
+                  to="/interview/results" 
+                  className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Previous Results</span>
+                </Link>
+                <Link to="/" className="flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                  <span className="font-display text-lg font-bold gradient-text">GradPrep AI</span>
+                </Link>
+              </div>
             </div>
           </div>
         </header>

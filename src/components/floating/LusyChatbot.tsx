@@ -77,7 +77,17 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
       });
 
       if (error) {
-        throw error;
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to call AI service');
+      }
+
+      if (data?.error) {
+        console.error('AI service error:', data.error);
+        throw new Error(data.error);
+      }
+
+      if (!data?.message) {
+        throw new Error('No response received from AI');
       }
 
       const assistantMessage: Message = {
@@ -94,7 +104,16 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
       }
     } catch (error) {
       console.error('Chat error:', error);
-      toast.error('Failed to get response. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      toast.error(`Failed to get response: ${errorMessage}`);
+      
+      // Add error message to chat so user can see what went wrong
+      const errorAssistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
+      };
+      setMessages(prev => [...prev, errorAssistantMessage]);
     } finally {
       setIsLoading(false);
       setIsVoiceMode(false);
