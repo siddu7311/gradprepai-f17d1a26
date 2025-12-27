@@ -8,12 +8,14 @@ import {
   LayoutDashboard,
   LogOut,
   ChevronDown,
-  Crown
+  Crown,
+  Shield
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { Footer } from '@/components/layout/Footer';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,6 +34,7 @@ interface MainLayoutProps {
 export function MainLayout({ children, showFooter = true }: MainLayoutProps) {
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
+  const { isAdmin } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -98,6 +101,12 @@ export function MainLayout({ children, showFooter = true }: MainLayoutProps) {
                   </motion.button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  {isAdmin && (
+                    <DropdownMenuItem onClick={() => navigate('/admin')}>
+                      <Shield className="w-4 h-4 mr-2" />
+                      Admin Panel
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate('/subscription')}>
                     <Crown className="w-4 h-4 mr-2" />
                     Subscription
