@@ -50,7 +50,7 @@ interface UseVoiceInterviewResult {
   stopListening: () => void;
   submitAnswer: () => Promise<void>;
   nextQuestion: () => void;
-  endInterview: () => void;
+  endInterview: () => Promise<void>;
   isInterviewActive: boolean;
   config: InterviewConfig | null;
   error: string | null;
@@ -113,10 +113,13 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
   }, []);
 
   const speakText = useCallback((text: string, personaOverride?: 'amds' | 'lusy') => {
+    // Prevent the browser STT from accidentally transcribing the AI's TTS audio
+    stopRecognition();
+
     const persona = personaOverride ?? config?.interviewer ?? 'lusy';
     const settings = getVoiceSettings(persona);
     speak(text, settings);
-  }, [config?.interviewer, getVoiceSettings, speak]);
+  }, [config?.interviewer, getVoiceSettings, speak, stopRecognition]);
 
   const addToTranscript = useCallback((role: 'ai' | 'user', text: string) => {
     setTranscript(prev => [...prev, { role, text, timestamp: new Date() }]);
