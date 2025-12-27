@@ -11,6 +11,7 @@ import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
+import { EnterpriseRequestModal } from '@/components/ui/EnterpriseRequestModal';
 
 const plans = [
   {
@@ -74,6 +75,7 @@ const Pricing = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [enterpriseModalOpen, setEnterpriseModalOpen] = useState(false);
 
   const canceled = searchParams.get('canceled') === 'true';
 
@@ -109,6 +111,14 @@ const Pricing = () => {
     } finally {
       setCheckoutLoading(false);
     }
+  };
+
+  const handleEnterpriseClick = () => {
+    if (!user) {
+      navigate('/signin?redirect=/pricing');
+      return;
+    }
+    setEnterpriseModalOpen(true);
   };
 
   const getButtonText = (plan: typeof plans[0]) => {
@@ -194,11 +204,13 @@ const Pricing = () => {
                     </ul>
 
                     {plan.name === 'Enterprise' ? (
-                      <a href="mailto:sales@gradprep.ai">
-                        <GlowButton variant="outline" className="w-full">
-                          {plan.cta}
-                        </GlowButton>
-                      </a>
+                      <GlowButton 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={handleEnterpriseClick}
+                      >
+                        {plan.cta}
+                      </GlowButton>
                     ) : plan.name === 'Pro' ? (
                       <GlowButton
                         variant="primary"
@@ -238,6 +250,11 @@ const Pricing = () => {
         </main>
 
         <Footer />
+
+        <EnterpriseRequestModal 
+          isOpen={enterpriseModalOpen} 
+          onClose={() => setEnterpriseModalOpen(false)} 
+        />
       </div>
     </>
   );
