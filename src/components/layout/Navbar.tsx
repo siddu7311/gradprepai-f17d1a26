@@ -5,6 +5,7 @@ import { Menu, X, Sparkles, LayoutDashboard, User, LogOut, ChevronDown, Crown } 
 import { GlowButton } from '@/components/ui/GlowButton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSubscription } from '@/hooks/useSubscription';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-
+import { Badge } from '@/components/ui/badge';
 const navLinks = [
   { name: 'Features', href: '#features' },
   { name: 'How It Works', href: '#how-it-works' },
@@ -26,6 +27,7 @@ export const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { isPro } = useSubscription();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -111,6 +113,11 @@ export const Navbar = () => {
                           </AvatarFallback>
                         </Avatar>
                         <span className="text-sm text-foreground">My Account</span>
+                        {isPro && (
+                          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-xs px-1.5 py-0">
+                            PRO
+                          </Badge>
+                        )}
                         <ChevronDown className="w-4 h-4 text-muted-foreground" />
                       </button>
                     </DropdownMenuTrigger>
