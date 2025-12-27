@@ -149,36 +149,6 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
     }
   };
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.message,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
-
-      // If user used voice, reply with voice too
-      if (fromVoice && isVoiceMode) {
-        speak(data.message, { voice: 'female' });
-      }
-    } catch (error) {
-      console.error('Chat error:', error);
-      toast.error("I'm having trouble responding right now. Please try again in a moment.");
-
-      // Add error message to chat so user can see what went wrong
-      const errorAssistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
-      };
-      setMessages((prev) => [...prev, errorAssistantMessage]);
-    } finally {
-      setIsLoading(false);
-      setIsVoiceMode(false);
-    }
-  };
-
   const handleVoiceInput = () => {
     if (authLoading) return;
 
@@ -216,7 +186,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
     }
   };
 
-  const inputDisabled = authLoading || !user || isLoading || isListening;
+  const inputDisabled = authLoading || isLoading || isListening;
 
   return (
     <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
@@ -298,7 +268,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
             variant={isListening ? 'default' : 'outline'}
             size="icon"
             onClick={handleVoiceInput}
-            disabled={authLoading || !user || isLoading}
+            disabled={authLoading || isLoading}
             className={isListening ? 'animate-pulse' : ''}
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -310,11 +280,9 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
             placeholder={
               authLoading
                 ? 'Loading...'
-                : !user
-                  ? 'Sign in to chat with LUSY...'
-                  : isListening
-                    ? 'Listening...'
-                    : 'Type or use voice...'
+                : isListening
+                  ? 'Listening...'
+                  : 'Type or use voice...'
             }
             disabled={inputDisabled}
             className="flex-1"
@@ -329,4 +297,3 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
 };
 
 export default LusyChatbot;
-
