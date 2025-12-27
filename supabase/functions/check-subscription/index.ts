@@ -32,7 +32,20 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
+
+    // If a request comes in without a real user session (e.g. anon token), treat as not subscribed
+    if (userError) {
+      const msg = userError.message || "";
+      logStep("Auth not available", { message: msg });
+      if (msg.toLowerCase().includes("auth session missing")) {
+        return new Response(JSON.stringify({ subscribed: false, is_admin: false }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+      throw new Error(`Authentication error: ${userError.message}`);
+    }
+
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
