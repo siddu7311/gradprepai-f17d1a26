@@ -1,12 +1,16 @@
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { Check, Sparkles, Zap, Crown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Check, Sparkles, Zap, Crown, Loader2 } from 'lucide-react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from 'react';
 
 const plans = [
   {
@@ -64,6 +68,65 @@ const plans = [
 ];
 
 const Pricing = () => {
+  const { user } = useAuth();
+  const { isPro, createCheckout, loading: subscriptionLoading } = useSubscription();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+
+  const canceled = searchParams.get('canceled') === 'true';
+
+  useEffect(() => {
+    if (canceled) {
+      toast({
+        title: "Checkout canceled",
+        description: "No worries! You can upgrade anytime.",
+      });
+    }
+  }, [canceled, toast]);
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      navigate('/signin?redirect=/pricing');
+      return;
+    }
+    
+    if (isPro) {
+      navigate('/subscription');
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      await createCheckout();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start checkout. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckoutLoading(false);
+    }
+  };
+
+  const getButtonText = (plan: typeof plans[0]) => {
+    if (plan.name === 'Pro') {
+      if (checkoutLoading) return <Loader2 className="w-4 h-4 animate-spin" />;
+      if (isPro) return 'Your Current Plan';
+      return plan.cta;
+    }
+    return plan.cta;
+  };
+
+  const getButtonAction = (plan: typeof plans[0]) => {
+    if (plan.name === 'Pro') {
+      return handleSubscribe;
+    }
+    return undefined;
+  };
+
   return (
     <>
       <Helmet>
@@ -130,14 +193,28 @@ const Pricing = () => {
                       ))}
                     </ul>
 
-                    <Link to="/signup">
+                    {plan.name === 'Enterprise' ? (
+                      <a href="mailto:sales@gradprep.ai">
+                        <GlowButton variant="outline" className="w-full">
+                          {plan.cta}
+                        </GlowButton>
+                      </a>
+                    ) : plan.name === 'Pro' ? (
                       <GlowButton
-                        variant={plan.popular ? 'primary' : 'outline'}
+                        variant="primary"
                         className="w-full"
+                        onClick={getButtonAction(plan)}
+                        disabled={checkoutLoading || subscriptionLoading}
                       >
-                        {plan.cta}
+                        {getButtonText(plan)}
                       </GlowButton>
-                    </Link>
+                    ) : (
+                      <Link to="/signup">
+                        <GlowButton variant="outline" className="w-full">
+                          {plan.cta}
+                        </GlowButton>
+                      </Link>
+                    )}
                   </GlassCard>
                 </motion.div>
               ))}
