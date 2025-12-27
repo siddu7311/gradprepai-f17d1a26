@@ -21,9 +21,11 @@ import { GlowButton } from '@/components/ui/GlowButton';
 import { Progress } from '@/components/ui/progress';
 import { Footer } from '@/components/layout/Footer';
 import { Helmet } from 'react-helmet-async';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import html2pdf from 'html2pdf.js';
 
 interface QuestionResult {
   question_number: number;
@@ -70,6 +72,56 @@ export default function InterviewResults() {
     problemSolving: 0,
     confidence: 0
   });
+  const resultsRef = useRef<HTMLDivElement>(null);
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'My Interview Results - GradPrep AI',
+      text: `I scored ${overallScore}% on my ${session?.role_type} interview practice! Check out GradPrep AI for interview preparation.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+        toast.success('Shared successfully!');
+      } else {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        toast.success('Link copied to clipboard!');
+      }
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') {
+        await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+        toast.success('Link copied to clipboard!');
+      }
+    }
+  };
+
+  const handleDownload = () => {
+    if (!resultsRef.current) return;
+    
+    toast.loading('Generating PDF...', { id: 'pdf-download' });
+    
+    const opt = {
+      margin: [10, 10],
+      filename: `interview-results-${session?.role_type || 'report'}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0a0a0f' },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    };
+
+    html2pdf()
+      .set(opt)
+      .from(resultsRef.current)
+      .save()
+      .then(() => {
+        toast.success('PDF downloaded successfully!', { id: 'pdf-download' });
+      })
+      .catch((error: Error) => {
+        console.error('PDF generation error:', error);
+        toast.error('Failed to generate PDF', { id: 'pdf-download' });
+      });
+  };
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -216,11 +268,11 @@ export default function InterviewResults() {
               </Link>
               
               <div className="flex items-center gap-3">
-                <GlowButton variant="outline" size="sm">
+                <GlowButton variant="outline" size="sm" onClick={handleShare}>
                   <Share2 className="w-4 h-4 mr-2" />
                   Share
                 </GlowButton>
-                <GlowButton variant="outline" size="sm">
+                <GlowButton variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </GlowButton>
@@ -229,7 +281,7 @@ export default function InterviewResults() {
           </div>
         </header>
 
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto px-4 py-8" ref={resultsRef}>
           {/* Overall Score */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
