@@ -66,13 +66,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
   const handleSend = async (text?: string, fromVoice = false) => {
     if (authLoading) return;
 
-    if (!user) {
-      toast.error('Please sign in to chat with LUSY.');
-      navigate('/signin');
-      return;
-    }
-
-    const messageText = text || input.trim();
+    const messageText = (text ?? input).trim();
     if (!messageText || isLoading) return;
 
     const userMessage: Message = {
@@ -87,7 +81,13 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
     setIsLoading(true);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
       const { data, error } = await supabase.functions.invoke('lusy-chat', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: {
           messages: [...messages, userMessage].map((m) => ({
             role: m.role,
@@ -97,9 +97,13 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
       });
 
       if (error) {
-        // Supabase invoke errors can hide the response body; keep message user-friendly.
+        const status = (error as any)?.context?.status;
         console.error('Supabase function error:', error);
-        throw new Error('Chat service returned an error');
+        throw new Error(
+          typeof status === 'number'
+            ? `Chat service error (status ${status})`
+            : 'Chat service returned an error',
+        );
       }
 
       if (data?.error) {
@@ -110,6 +114,40 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
       if (!data?.message) {
         throw new Error('No response received from AI');
       }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.message,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      // If user used voice, reply with voice too
+      if (fromVoice && isVoiceMode) {
+        speak(data.message, { voice: 'female' });
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "I'm having trouble responding right now. Please try again in a moment.",
+      );
+
+      // Add error message to chat so user can see what went wrong
+      const errorAssistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content:
+          "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
+      };
+      setMessages((prev) => [...prev, errorAssistantMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsVoiceMode(false);
+    }
+  };
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
