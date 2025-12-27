@@ -1,1 +1,19 @@
 project_id = "hqmwmggvempcgzmlksaq"
+
+[functions.generate-interview-questions]
+verify_jwt = false
+
+[functions.analyze-interview-response]
+verify_jwt = false
+
+[functions.interview-stt]
+verify_jwt = false
+
+[functions.interview-tts]
+verify_jwt = false
+
+[functions.lusy-chat]
+verify_jwt = false
+
+[functions.analyze-resume]
+verify_jwt = false
