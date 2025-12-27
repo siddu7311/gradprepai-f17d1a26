@@ -12,7 +12,7 @@ const FloatingBubbles = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-4">
       {/* Panels */}
       <AnimatePresence>
         {activePanel === 'schedule' && (
@@ -20,7 +20,7 @@ const FloatingBubbles = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute bottom-24 right-0 w-80 sm:w-96"
+            className="absolute bottom-28 right-0 w-80 sm:w-96"
           >
             <ScheduleManager onClose={() => setActivePanel(null)} />
           </motion.div>
@@ -30,7 +30,7 @@ const FloatingBubbles = () => {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute bottom-24 right-0 w-80 sm:w-96"
+            className="absolute bottom-28 right-0 w-80 sm:w-96"
           >
             <LusyChatbot onClose={() => setActivePanel(null)} />
           </motion.div>
@@ -39,32 +39,40 @@ const FloatingBubbles = () => {
 
       {/* Schedule Bubble */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
+        whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => togglePanel('schedule')}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-md transition-colors border text-xs ${
+        className={`w-14 h-14 rounded-full shadow-lg transition-all flex items-center justify-center ${
           activePanel === 'schedule' 
-            ? 'bg-primary text-primary-foreground border-primary' 
-            : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border-border hover:border-primary'
+            ? 'bg-primary text-primary-foreground shadow-primary/30' 
+            : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary hover:shadow-primary/20'
         }`}
+        style={{
+          boxShadow: activePanel === 'schedule' 
+            ? '0 8px 32px -4px hsl(var(--primary) / 0.4)' 
+            : '0 8px 24px -4px hsl(var(--background) / 0.3)'
+        }}
       >
-        <Calendar className="w-4 h-4" />
-        <span className="font-medium">Schedule</span>
+        <Calendar className="w-6 h-6" />
       </motion.button>
 
       {/* LUSY Chat Bubble */}
       <motion.button
-        whileHover={{ scale: 1.05 }}
+        whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => togglePanel('chat')}
-        className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-md transition-colors border text-xs ${
+        className={`w-14 h-14 rounded-full shadow-lg transition-all flex items-center justify-center ${
           activePanel === 'chat' 
-            ? 'bg-primary text-primary-foreground border-primary' 
-            : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border-border hover:border-primary'
+            ? 'bg-primary text-primary-foreground shadow-primary/30' 
+            : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border border-border hover:border-primary hover:shadow-primary/20'
         }`}
+        style={{
+          boxShadow: activePanel === 'chat' 
+            ? '0 8px 32px -4px hsl(var(--primary) / 0.4)' 
+            : '0 8px 24px -4px hsl(var(--background) / 0.3)'
+        }}
       >
-        <MessageCircle className="w-4 h-4" />
-        <span className="font-medium">LUSY</span>
+        <MessageCircle className="w-6 h-6" />
       </motion.button>
     </div>
   );

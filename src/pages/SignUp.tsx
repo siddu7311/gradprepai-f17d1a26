@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, Sparkles, ArrowLeft, Chrome } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Sparkles, ArrowLeft } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -11,23 +11,12 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
-
-// Social login icons
-const LinkedInIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-  </svg>
-);
-
-const FacebookIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor">
-    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-  </svg>
-);
+import GoogleIcon from '@/components/ui/GoogleIcon';
 
 export default function SignUp() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,10 +29,12 @@ export default function SignUp() {
     e.preventDefault();
     setIsLoading(true);
     
+    const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
+        emailRedirectTo: redirectUrl,
         data: { display_name: formData.name },
       },
     });
@@ -67,11 +58,24 @@ export default function SignUp() {
     navigate('/dashboard');
   };
 
-  const handleSocialLogin = (provider: string) => {
-    toast({
-      title: `${provider} Sign Up`,
-      description: "Social login will be available soon.",
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true);
+    const redirectUrl = `${window.location.origin}/`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: redirectUrl,
+      },
     });
+    
+    if (error) {
+      toast({
+        title: "Google sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsGoogleLoading(false);
+    }
   };
 
   return (
@@ -111,33 +115,27 @@ export default function SignUp() {
               </p>
             </div>
 
-            {/* Social Login */}
-            <div className="grid grid-cols-3 gap-3 mb-6">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialLogin('Google')}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass border border-glass-border/30 hover:border-primary/30 transition-colors"
-              >
-                <Chrome className="w-5 h-5 text-foreground" />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialLogin('LinkedIn')}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass border border-glass-border/30 hover:border-blue-500/30 transition-colors text-blue-500"
-              >
-                <LinkedInIcon />
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handleSocialLogin('Facebook')}
-                className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl glass border border-glass-border/30 hover:border-blue-600/30 transition-colors text-blue-600"
-              >
-                <FacebookIcon />
-              </motion.button>
-            </div>
+            {/* Google Sign Up */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleGoogleSignUp}
+              disabled={isGoogleLoading}
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl glass border border-glass-border/30 hover:border-primary/30 transition-colors mb-6"
+            >
+              {isGoogleLoading ? (
+                <motion.span
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-5 h-5 border-2 border-foreground/30 border-t-foreground rounded-full"
+                />
+              ) : (
+                <GoogleIcon className="w-5 h-5" />
+              )}
+              <span className="text-foreground font-medium">
+                {isGoogleLoading ? 'Connecting...' : 'Continue with Google'}
+              </span>
+            </motion.button>
 
             <div className="relative mb-6">
               <Separator className="bg-border" />
