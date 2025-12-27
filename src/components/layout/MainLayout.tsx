@@ -7,7 +7,8 @@ import {
   User, 
   LayoutDashboard,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Crown
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { Footer } from '@/components/layout/Footer';
@@ -97,6 +98,10 @@ export function MainLayout({ children, showFooter = true }: MainLayoutProps) {
                   </motion.button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate('/subscription')}>
+                    <Crown className="w-4 h-4 mr-2" />
+                    Subscription
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/profile')}>
                     <User className="w-4 h-4 mr-2" />
                     Profile
