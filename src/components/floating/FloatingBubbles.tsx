@@ -42,14 +42,14 @@ const FloatingBubbles = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => togglePanel('schedule')}
-        className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-colors border ${
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-md transition-colors border text-xs ${
           activePanel === 'schedule' 
             ? 'bg-primary text-primary-foreground border-primary' 
             : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border-border hover:border-primary'
         }`}
       >
-        <Calendar className="w-5 h-5" />
-        <span className="text-sm font-medium">Schedule</span>
+        <Calendar className="w-4 h-4" />
+        <span className="font-medium">Schedule</span>
       </motion.button>
 
       {/* LUSY Chat Bubble */}
@@ -57,14 +57,14 @@ const FloatingBubbles = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => togglePanel('chat')}
-        className={`flex items-center gap-2 px-4 py-3 rounded-full shadow-lg transition-colors border ${
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-full shadow-md transition-colors border text-xs ${
           activePanel === 'chat' 
             ? 'bg-primary text-primary-foreground border-primary' 
             : 'bg-card text-foreground hover:bg-primary hover:text-primary-foreground border-border hover:border-primary'
         }`}
       >
-        <MessageCircle className="w-5 h-5" />
-        <span className="text-sm font-medium">LUSY</span>
+        <MessageCircle className="w-4 h-4" />
+        <span className="font-medium">LUSY</span>
       </motion.button>
     </div>
   );

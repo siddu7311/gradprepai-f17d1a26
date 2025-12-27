@@ -17,6 +17,7 @@ export interface InterviewConfig {
   language: string;
   difficulty: string;
   interviewer: 'amds' | 'lusy';
+  questionCount?: number;
 }
 
 export interface TranscriptEntry {
@@ -72,6 +73,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
   const sessionIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<Date | null>(null);
   const userAnswersRef = useRef<Map<number, string>>(new Map());
+  const autoStartMicRef = useRef(false);
   const { speak, isSpeaking: isAISpeaking, cancel: cancelSpeech } = useSpeechSynthesis();
   
   const handleSpeechResult = useCallback((result: string) => {
@@ -90,6 +92,19 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
     continuous: true,
     interimResults: true
   });
+
+  // Auto-start microphone when AI finishes speaking
+  useEffect(() => {
+    if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading) {
+      // Small delay to ensure speech has fully stopped
+      const timer = setTimeout(() => {
+        if (!isAISpeaking && isInterviewActive) {
+          startRecognition();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, startRecognition]);
 
   const getVoiceSettings = useCallback((persona: 'amds' | 'lusy') => {
     return persona === 'amds'
@@ -114,6 +129,9 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
     startTimeRef.current = new Date();
     userAnswersRef.current = new Map();
 
+    const questionCount = interviewConfig.questionCount || 5;
+    autoStartMicRef.current = true;
+
     try {
       // Create interview session in database
       if (user?.id) {
@@ -124,7 +142,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
             role_type: interviewConfig.role,
             difficulty: interviewConfig.difficulty,
             status: 'in_progress',
-            total_questions: 5,
+            total_questions: questionCount,
             completed_questions: 0
           })
           .select()
@@ -143,7 +161,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
           language: interviewConfig.language,
           difficulty: interviewConfig.difficulty,
           persona: interviewConfig.interviewer,
-          questionCount: 5
+          questionCount
         }
       });
 
@@ -300,6 +318,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
   }, [currentQuestion, questions, config, addToTranscript, speakText]);
 
   const endInterview = useCallback(async () => {
+    autoStartMicRef.current = false;
     cancelSpeech();
     stopRecognition();
     setIsInterviewActive(false);

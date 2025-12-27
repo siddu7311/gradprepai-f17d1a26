@@ -18,7 +18,8 @@ import {
   Mic,
   User,
   CheckCircle2,
-  Volume2
+  Volume2,
+  Hash
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -50,6 +51,13 @@ const difficulties = [
   { id: 'advanced', name: 'Advanced', description: 'Complex scenarios and system design', color: 'from-red-500 to-pink-500' },
 ];
 
+const questionCountOptions = [
+  { count: 3, label: 'Quick Practice', description: '~5 minutes' },
+  { count: 5, label: 'Standard', description: '~10 minutes' },
+  { count: 8, label: 'Thorough', description: '~15 minutes' },
+  { count: 10, label: 'Full Interview', description: '~20 minutes' },
+];
+
 const interviewers = [
   { 
     id: 'amds', 
@@ -74,6 +82,7 @@ export default function InterviewSetup() {
     role: '',
     language: '',
     difficulty: '',
+    questionCount: 5,
     interviewer: '',
   });
   
@@ -91,7 +100,7 @@ export default function InterviewSetup() {
   };
 
   const handleNext = () => {
-    if (step < 4) {
+    if (step < 5) {
       setStep(step + 1);
     } else {
       // Pass the interview configuration to the room
@@ -100,6 +109,7 @@ export default function InterviewSetup() {
           role: roles.find(r => r.id === selection.role)?.name || selection.role,
           language: selection.language,
           difficulty: selection.difficulty,
+          questionCount: selection.questionCount,
           interviewer: selection.interviewer as 'amds' | 'lusy'
         }
       });
@@ -117,7 +127,8 @@ export default function InterviewSetup() {
       case 1: return !!selection.role;
       case 2: return !!selection.language;
       case 3: return !!selection.difficulty;
-      case 4: return !!selection.interviewer;
+      case 4: return selection.questionCount > 0;
+      case 5: return !!selection.interviewer;
       default: return false;
     }
   };
@@ -156,7 +167,7 @@ export default function InterviewSetup() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-center justify-center gap-2 mb-12"
           >
-            {[1, 2, 3, 4].map((s) => (
+            {[1, 2, 3, 4, 5].map((s) => (
               <div key={s} className="flex items-center">
                 <motion.div
                   animate={{
@@ -169,7 +180,7 @@ export default function InterviewSetup() {
                 >
                   {step > s ? <CheckCircle2 className="w-5 h-5" /> : s}
                 </motion.div>
-                {s < 4 && (
+                {s < 5 && (
                   <div className={`w-12 h-1 mx-1 rounded-full transition-colors ${
                     step > s ? 'bg-primary' : 'bg-muted'
                   }`} />
@@ -310,10 +321,60 @@ export default function InterviewSetup() {
               </motion.div>
             )}
 
-            {/* Step 4: Interviewer Selection */}
+            {/* Step 4: Question Count Selection */}
             {step === 4 && (
               <motion.div
                 key="step4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h1 className="font-display text-3xl font-bold text-foreground mb-2">
+                    How Many Questions?
+                  </h1>
+                  <p className="text-muted-foreground">
+                    Choose how long you want your interview to be
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                  {questionCountOptions.map((option) => (
+                    <motion.button
+                      key={option.count}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setSelection({ ...selection, questionCount: option.count })}
+                      className={`p-6 rounded-2xl glass text-center transition-all ${
+                        selection.questionCount === option.count 
+                          ? 'border-2 border-primary shadow-glow' 
+                          : 'border border-glass-border/30 hover:border-primary/50'
+                      }`}
+                    >
+                      <div className={`w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center ${
+                        selection.questionCount === option.count 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <span className="text-2xl font-bold">{option.count}</span>
+                      </div>
+                      <h3 className="font-display text-base font-semibold text-foreground mb-1">
+                        {option.label}
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        {option.description}
+                      </p>
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 5: Interviewer Selection */}
+            {step === 5 && (
+              <motion.div
+                key="step5"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
@@ -394,7 +455,7 @@ export default function InterviewSetup() {
               disabled={!isStepComplete()}
               className={!isStepComplete() ? 'opacity-50 cursor-not-allowed' : ''}
             >
-              {step === 4 ? (
+              {step === 5 ? (
                 <>
                   <Mic className="w-5 h-5 mr-2" />
                   Start Interview

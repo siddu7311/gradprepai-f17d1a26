@@ -1,9 +1,18 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, Zap, Brain, Mic } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Zap, Brain, Mic, X } from 'lucide-react';
 import { GlowButton } from '@/components/ui/GlowButton';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export const HeroSection = () => {
+  const [showDemo, setShowDemo] = useState(false);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       <div className="container mx-auto px-4 py-20">
@@ -60,7 +69,12 @@ export const HeroSection = () => {
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
               </GlowButton>
             </Link>
-            <GlowButton variant="outline" size="lg" className="min-w-[200px]">
+            <GlowButton 
+              variant="outline" 
+              size="lg" 
+              className="min-w-[200px]"
+              onClick={() => setShowDemo(true)}
+            >
               <Play className="w-5 h-5 mr-2" />
               Watch Demo
             </GlowButton>
@@ -102,6 +116,80 @@ export const HeroSection = () => {
 
       {/* Bottom gradient fade */}
       <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
+
+      {/* Demo Video Dialog */}
+      <Dialog open={showDemo} onOpenChange={setShowDemo}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="text-xl font-display">How GradPrep AI Works</DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+              {/* Demo content - showing feature walkthrough */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 bg-gradient-to-br from-primary/5 to-secondary/5">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="text-center max-w-lg"
+                >
+                  <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-6">
+                    <Sparkles className="w-10 h-10 text-primary" />
+                  </div>
+                  <h3 className="font-display text-2xl font-bold text-foreground mb-4">
+                    AI-Powered Interview Practice
+                  </h3>
+                  <div className="space-y-4 text-left">
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-background/50"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">1</div>
+                      <div>
+                        <p className="font-medium text-foreground">Choose Your Role</p>
+                        <p className="text-sm text-muted-foreground">Select from 10+ tech roles and difficulty levels</p>
+                      </div>
+                    </motion.div>
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-background/50"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-sm font-bold">2</div>
+                      <div>
+                        <p className="font-medium text-foreground">Practice with AI</p>
+                        <p className="text-sm text-muted-foreground">Speak naturally with our AI interviewers (AMDS or LUSY)</p>
+                      </div>
+                    </motion.div>
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.6 }}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-background/50"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-accent text-accent-foreground flex items-center justify-center text-sm font-bold">3</div>
+                      <div>
+                        <p className="font-medium text-foreground">Get Instant Feedback</p>
+                        <p className="text-sm text-muted-foreground">Receive detailed analysis and improvement suggestions</p>
+                      </div>
+                    </motion.div>
+                  </div>
+                </motion.div>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-center">
+              <Link to="/signup" onClick={() => setShowDemo(false)}>
+                <GlowButton>
+                  Try It Now - Free
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </GlowButton>
+              </Link>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
