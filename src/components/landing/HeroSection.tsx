@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, Zap, Brain, Mic, X } from 'lucide-react';
+import { ArrowRight, Play, Sparkles, Zap, Brain, Mic, X, LogIn, UserPlus } from 'lucide-react';
 import { GlowButton } from '@/components/ui/GlowButton';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
 
 export const HeroSection = () => {
   const [showDemo, setShowDemo] = useState(false);
+  const { user } = useAuth();
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -63,21 +65,44 @@ export const HeroSection = () => {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
           >
-            <Link to="/signup">
-              <GlowButton size="lg" className="min-w-[200px]">
-                Start Free Trial
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </GlowButton>
-            </Link>
-            <GlowButton 
-              variant="outline" 
-              size="lg" 
-              className="min-w-[200px]"
-              onClick={() => setShowDemo(true)}
-            >
-              <Play className="w-5 h-5 mr-2" />
-              Watch Demo
-            </GlowButton>
+            {user ? (
+              <>
+                <Link to="/interview-setup">
+                  <GlowButton size="lg" className="min-w-[200px]">
+                    Start Interview
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                  </GlowButton>
+                </Link>
+                <Link to="/dashboard">
+                  <GlowButton 
+                    variant="outline" 
+                    size="lg" 
+                    className="min-w-[200px]"
+                  >
+                    Go to Dashboard
+                  </GlowButton>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/signin">
+                  <GlowButton size="lg" className="min-w-[200px]">
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Sign In
+                  </GlowButton>
+                </Link>
+                <Link to="/signup">
+                  <GlowButton 
+                    variant="outline" 
+                    size="lg" 
+                    className="min-w-[200px]"
+                  >
+                    <UserPlus className="w-5 h-5 mr-2" />
+                    Sign Up
+                  </GlowButton>
+                </Link>
+              </>
+            )}
           </motion.div>
 
         </div>
