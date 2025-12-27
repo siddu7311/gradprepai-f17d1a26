@@ -85,22 +85,21 @@ export const HeroSection = () => {
               </>
             ) : (
               <>
-                <Link to="/signin">
-                  <GlowButton size="lg" className="min-w-[200px]">
-                    <LogIn className="w-5 h-5 mr-2" />
-                    Sign In
-                  </GlowButton>
-                </Link>
                 <Link to="/signup">
-                  <GlowButton 
-                    variant="outline" 
-                    size="lg" 
-                    className="min-w-[200px]"
-                  >
-                    <UserPlus className="w-5 h-5 mr-2" />
-                    Sign Up
+                  <GlowButton size="lg" className="min-w-[200px]">
+                    Start Free Trial
+                    <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
                   </GlowButton>
                 </Link>
+                <GlowButton 
+                  variant="outline" 
+                  size="lg" 
+                  className="min-w-[200px]"
+                  onClick={() => setShowDemo(true)}
+                >
+                  <Play className="w-5 h-5 mr-2" />
+                  Watch Demo
+                </GlowButton>
               </>
             )}
           </motion.div>
