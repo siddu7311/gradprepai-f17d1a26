@@ -95,16 +95,26 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
 
   // Auto-start microphone when AI finishes speaking
   useEffect(() => {
-    if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading) {
-      // Small delay to ensure speech has fully stopped
+    // Only auto-start when:
+    // 1. AI just finished speaking (isAISpeaking went false)
+    // 2. Interview is active
+    // 3. autoStartMicRef is true (enabled after first question)
+    // 4. Speech recognition is supported
+    // 5. Not currently loading
+    // 6. Not already listening
+    if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading && !isUserSpeaking) {
+      // Delay to ensure TTS audio has fully stopped and won't be picked up
       const timer = setTimeout(() => {
-        if (!isAISpeaking && isInterviewActive) {
+        if (!isAISpeaking && isInterviewActive && !isUserSpeaking) {
+          console.log('Auto-starting microphone after AI speech ended');
+          resetTranscript();
+          setCurrentUserTranscript('');
           startRecognition();
         }
-      }, 500);
+      }, 700);
       return () => clearTimeout(timer);
     }
-  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, startRecognition]);
+  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, isUserSpeaking, startRecognition, resetTranscript]);
 
   const getVoiceSettings = useCallback((persona: 'amds' | 'lusy') => {
     return persona === 'amds'
