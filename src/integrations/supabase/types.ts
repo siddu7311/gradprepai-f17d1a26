@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      enterprise_requests: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          organization: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_email: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          organization?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_email: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          organization?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       interview_results: {
         Row: {
           communication_score: number | null

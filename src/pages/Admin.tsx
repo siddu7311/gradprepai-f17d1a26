@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft, Building2, Check, X, Clock } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface UserRole {
@@ -26,6 +26,17 @@ interface Profile {
   display_name: string | null;
 }
 
+interface EnterpriseRequest {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_name: string | null;
+  organization: string | null;
+  message: string | null;
+  status: string;
+  created_at: string;
+}
+
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: subLoading } = useSubscription();
@@ -33,6 +44,7 @@ const Admin = () => {
   
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [enterpriseRequests, setEnterpriseRequests] = useState<EnterpriseRequest[]>([]);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'moderator'>('admin');
   const [loading, setLoading] = useState(true);
@@ -76,7 +88,16 @@ const Admin = () => {
 
       if (profilesError) throw profilesError;
 
+      // Fetch enterprise requests
+      const { data: requestsData, error: requestsError } = await supabase
+        .from('enterprise_requests')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (requestsError) throw requestsError;
+
       setProfiles(profilesData || []);
+      setEnterpriseRequests(requestsData || []);
       
       // Merge roles with email from profiles
       const rolesWithEmail = (rolesData || []).map(role => {
@@ -93,6 +114,58 @@ const Admin = () => {
       toast.error('Failed to load admin data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveRequest = async (request: EnterpriseRequest) => {
+    try {
+      // Add moderator role to user for Pro access
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({ user_id: request.user_id, role: 'moderator' });
+
+      if (roleError && !roleError.message.includes('duplicate')) throw roleError;
+
+      // Update request status
+      const { error: updateError } = await supabase
+        .from('enterprise_requests')
+        .update({ 
+          status: 'approved', 
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+
+      if (updateError) throw updateError;
+
+      toast.success(`Approved! ${request.user_email} now has Pro access.`);
+      fetchData();
+    } catch (error) {
+      console.error('Error approving request:', error);
+      toast.error('Failed to approve request');
+    }
+  };
+
+  const handleRejectRequest = async (request: EnterpriseRequest) => {
+    if (!confirm(`Reject request from ${request.user_email}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('enterprise_requests')
+        .update({ 
+          status: 'rejected',
+          reviewed_by: user?.id,
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', request.id);
+
+      if (error) throw error;
+
+      toast.success('Request rejected');
+      fetchData();
+    } catch (error) {
+      console.error('Error rejecting request:', error);
+      toast.error('Failed to reject request');
     }
   };
 
@@ -229,7 +302,84 @@ const Admin = () => {
               </div>
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Pending Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-orange-500" />
+                <span className="text-2xl font-bold">
+                  {enterpriseRequests.filter(r => r.status === 'pending').length}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* Enterprise Requests */}
+        {enterpriseRequests.filter(r => r.status === 'pending').length > 0 && (
+          <Card className="mb-8 border-orange-500/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-orange-500" />
+                Enterprise Access Requests
+              </CardTitle>
+              <CardDescription>
+                Users requesting Pro access for their organization
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Organization</TableHead>
+                    <TableHead>Message</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {enterpriseRequests.filter(r => r.status === 'pending').map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{request.user_name}</div>
+                          <div className="text-sm text-muted-foreground">{request.user_email}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{request.organization}</TableCell>
+                      <TableCell className="max-w-xs truncate">{request.message || '-'}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleApproveRequest(request)}
+                          >
+                            <Check className="w-4 h-4 mr-1" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRejectRequest(request)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Add New Role */}
         <Card className="mb-8">
