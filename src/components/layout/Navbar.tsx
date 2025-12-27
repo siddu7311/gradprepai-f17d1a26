@@ -1,9 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sparkles } from 'lucide-react';
+import { Menu, X, Sparkles, LayoutDashboard, User, LogOut, ChevronDown } from 'lucide-react';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 const navLinks = [
   { name: 'Features', href: '#features' },
@@ -15,6 +24,8 @@ export const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +34,18 @@ export const Navbar = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const getInitials = () => {
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
 
   return (
     <>
@@ -71,16 +94,60 @@ export const Navbar = () => {
 
             {/* Auth Buttons */}
             <div className="hidden md:flex items-center gap-4">
-              <Link to="/signin">
-                <GlowButton variant="ghost" size="sm">
-                  Sign In
-                </GlowButton>
-              </Link>
-              <Link to="/signup">
-                <GlowButton variant="primary" size="sm">
-                  Get Started
-                </GlowButton>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/dashboard">
+                    <GlowButton variant="ghost" size="sm">
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </GlowButton>
+                  </Link>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 px-3 py-2 rounded-xl glass border border-glass-border/30 hover:border-primary/30 transition-colors">
+                        <Avatar className="w-7 h-7">
+                          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                            {getInitials()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-foreground">My Account</span>
+                        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile" className="cursor-pointer">
+                          <User className="w-4 h-4 mr-2" />
+                          Profile
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/settings" className="cursor-pointer">
+                          Settings
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-destructive">
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <>
+                  <Link to="/signin">
+                    <GlowButton variant="ghost" size="sm">
+                      Sign In
+                    </GlowButton>
+                  </Link>
+                  <Link to="/signup">
+                    <GlowButton variant="primary" size="sm">
+                      Get Started
+                    </GlowButton>
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -126,16 +193,43 @@ export const Navbar = () => {
                 </motion.a>
               ))}
               <div className="flex flex-col gap-4 mt-8 w-full max-w-xs">
-                <Link to="/signin" onClick={() => setIsMobileMenuOpen(false)}>
-                  <GlowButton variant="outline" className="w-full">
-                    Sign In
-                  </GlowButton>
-                </Link>
-                <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
-                  <GlowButton variant="primary" className="w-full">
-                    Get Started
-                  </GlowButton>
-                </Link>
+                {user ? (
+                  <>
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                      <GlowButton variant="outline" className="w-full">
+                        <LayoutDashboard className="w-4 h-4 mr-2" />
+                        Dashboard
+                      </GlowButton>
+                    </Link>
+                    <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)}>
+                      <GlowButton variant="outline" className="w-full">
+                        <User className="w-4 h-4 mr-2" />
+                        Profile
+                      </GlowButton>
+                    </Link>
+                    <GlowButton 
+                      variant="outline" 
+                      className="w-full text-destructive" 
+                      onClick={() => { handleSignOut(); setIsMobileMenuOpen(false); }}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </GlowButton>
+                  </>
+                ) : (
+                  <>
+                    <Link to="/signin" onClick={() => setIsMobileMenuOpen(false)}>
+                      <GlowButton variant="outline" className="w-full">
+                        Sign In
+                      </GlowButton>
+                    </Link>
+                    <Link to="/signup" onClick={() => setIsMobileMenuOpen(false)}>
+                      <GlowButton variant="primary" className="w-full">
+                        Get Started
+                      </GlowButton>
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>
