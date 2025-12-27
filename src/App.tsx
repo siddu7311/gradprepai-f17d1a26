@@ -17,6 +17,7 @@ import InterviewRoom from "./pages/InterviewRoom";
 import InterviewResults from "./pages/InterviewResults";
 import ResumeBuilder from "./pages/ResumeBuilder";
 import Pricing from "./pages/Pricing";
+import Subscription from "./pages/Subscription";
 import FAQ from "./pages/FAQ";
 import About from "./pages/About";
 import InterviewTips from "./pages/InterviewTips";
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/interview/results" element={<InterviewResults />} />
               <Route path="/resume-builder" element={<ResumeBuilder />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/subscription" element={<Subscription />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/about" element={<About />} />
               <Route path="/interview-tips" element={<InterviewTips />} />
