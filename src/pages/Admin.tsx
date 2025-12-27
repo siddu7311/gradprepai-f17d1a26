@@ -39,11 +39,15 @@ const Admin = () => {
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    if (!subLoading && !isAdmin) {
+    if (!subLoading && !user) {
+      navigate('/signin');
+      return;
+    }
+    if (!subLoading && user && !isAdmin) {
       toast.error('Access denied. Admin privileges required.');
       navigate('/dashboard');
     }
-  }, [isAdmin, subLoading, navigate]);
+  }, [isAdmin, subLoading, user, navigate]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -163,7 +167,7 @@ const Admin = () => {
     );
   }
 
-  if (!isAdmin) {
+  if (!user || !isAdmin) {
     return null;
   }
 
