@@ -101,20 +101,24 @@ export default function InterviewRoom() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleEndInterview = () => {
-    endInterview();
-    // Navigate to results after a short delay
-    setTimeout(() => {
-      navigate('/interview/results', {
-        state: {
-          config,
-          transcript,
-          analyses,
-          questions,
-          elapsedTime
-        }
-      });
-    }, 3000);
+  const handleEndInterview = async () => {
+    // Save the current answer (if any) before ending
+    if (currentUserTranscript.trim()) {
+      await submitAnswer();
+    }
+
+    // Ensure the session is marked completed before navigating to results
+    await endInterview();
+
+    navigate('/interview/results', {
+      state: {
+        config,
+        transcript,
+        analyses,
+        questions,
+        elapsedTime
+      }
+    });
   };
 
   const handleMicToggle = () => {
@@ -131,11 +135,16 @@ export default function InterviewRoom() {
     }
   };
 
-  const handleNextQuestion = () => {
+  const handleNextQuestion = async () => {
+    // Auto-save the answer when the user moves forward (prevents empty result sessions)
+    if (currentUserTranscript.trim()) {
+      await submitAnswer();
+    }
+
     if (currentQuestion < questions.length - 1) {
       nextQuestion();
     } else {
-      handleEndInterview();
+      await handleEndInterview();
     }
   };
 

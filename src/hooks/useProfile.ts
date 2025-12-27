@@ -43,16 +43,23 @@ export function useProfile() {
   const updateProfile = useMutation({
     mutationFn: async (updates: Partial<Profile>) => {
       if (!user?.id) throw new Error('Not authenticated');
-      
+
+      // Use upsert so first-time users (no profile row yet) can still save settings
+      const payload: Partial<Profile> & { user_id: string; email?: string | null } = {
+        ...updates,
+        user_id: user.id,
+        // Ensure email is present for newly created profiles
+        email: updates.email ?? user.email ?? null,
+      };
+
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('user_id', user.id)
-        .select()
+        .upsert(payload, { onConflict: 'user_id' })
+        .select('*')
         .single();
 
       if (error) throw error;
-      return data;
+      return data as Profile;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
