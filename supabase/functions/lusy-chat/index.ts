@@ -2,34 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
 
-  try {
-    const { messages } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { 
-            role: "system", 
-            content: `You are LUSY, a friendly and helpful AI interview coach assistant. You help users:
+const systemPrompt = `You are LUSY, a friendly and helpful AI interview coach assistant. You help users:
 - Prepare for job interviews
 - Answer questions about interview techniques
 - Provide tips on resume building
@@ -37,44 +19,106 @@ serve(async (req) => {
 - Help with mock interview questions
 - Explain technical concepts for tech interviews
 
-Be encouraging, supportive, and provide actionable advice. Keep responses concise but helpful. 
-If users ask about scheduling, remind them they can use the Schedule Manager (the calendar icon) to set up interview reminders.` 
-          },
-          ...messages,
-        ],
-        stream: false,
-      }),
-    });
+Be encouraging, supportive, and provide actionable advice. Keep responses concise but helpful.
+If users ask about scheduling, remind them they can use the Schedule Manager (the calendar icon) to set up interview reminders.`;
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
+serve(async (req) => {
+  const requestId = crypto.randomUUID();
+
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const body = await req.json().catch(() => null);
+    const messages: ChatMessage[] = Array.isArray(body?.messages) ? body.messages : [];
+
+    console.log(`[lusy-chat] ${requestId} received messages=${messages.length}`);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      console.error(`[lusy-chat] ${requestId} LOVABLE_API_KEY is not configured`);
+      return new Response(
+        JSON.stringify({
+          message:
+            "I'm temporarily unavailable because the chat service is not configured. Please try again later.",
+        }),
+        {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Service temporarily unavailable." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI service error");
+        },
+      );
     }
 
-    const data = await response.json();
-    const assistantMessage = data.choices?.[0]?.message?.content || "I'm sorry, I couldn't process that. Please try again.";
+    const response = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "system", content: systemPrompt }, ...messages],
+          stream: false,
+        }),
+      },
+    );
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      console.error(
+        `[lusy-chat] ${requestId} AI gateway error status=${response.status} body=${responseText.slice(0, 500)}`,
+      );
+
+      const message =
+        response.status === 429
+          ? "I'm getting too many requests right now. Please wait a minute and try again."
+          : "I'm having trouble responding right now. Please try again in a moment.";
+
+      // IMPORTANT: return 200 so the client can display a friendly message instead of failing.
+      return new Response(JSON.stringify({ message }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let data: any = null;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error(`[lusy-chat] ${requestId} failed to parse JSON`, parseError);
+      return new Response(
+        JSON.stringify({
+          message:
+            "I received an unexpected response format. Please try again in a moment.",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    const assistantMessage =
+      data?.choices?.[0]?.message?.content?.trim?.() ||
+      "I'm sorry, I couldn't process that. Please try again.";
 
     return new Response(JSON.stringify({ message: assistantMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("LUSY chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error(`[lusy-chat] ${requestId} unhandled error:`, error);
+    // IMPORTANT: return 200 so the client can still show a message.
+    return new Response(
+      JSON.stringify({
+        message:
+          "I'm sorry, I'm having trouble responding right now. Please try again in a moment.",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
+
