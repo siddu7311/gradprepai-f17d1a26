@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Bell, Calendar, Clock, Trash2 } from 'lucide-react';
+import { X, Plus, Bell, Calendar, Clock, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +28,7 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
   const { user } = useAuth();
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
@@ -36,7 +37,6 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
     scheduled_at: '',
     reminder_minutes: 15,
   });
-
   useEffect(() => {
     if (user) {
       fetchSchedules();
@@ -109,7 +109,7 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error('Please sign in to create schedules');
+      toast.error('Please sign in to manage schedules');
       return;
     }
 
@@ -120,43 +120,80 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
 
     setLoading(true);
     
-    // Convert datetime-local value to ISO string preserving the exact time
-    // datetime-local gives us "YYYY-MM-DDTHH:MM" in local time
-    // We need to create a Date object from this and convert to ISO
     const localDate = new Date(formData.scheduled_at);
     const isoString = localDate.toISOString();
-    
-    console.log('Saving schedule:', {
-      input: formData.scheduled_at,
-      localDate: localDate.toString(),
-      isoString: isoString
-    });
 
-    const { error } = await supabase.from('schedules').insert({
-      user_id: user.id,
-      title: formData.title,
-      description: formData.description || null,
-      event_type: formData.event_type,
-      scheduled_at: isoString,
-      reminder_minutes: formData.reminder_minutes,
-    });
+    if (editingSchedule) {
+      // Update existing schedule
+      const { error } = await supabase
+        .from('schedules')
+        .update({
+          title: formData.title,
+          description: formData.description || null,
+          event_type: formData.event_type,
+          scheduled_at: isoString,
+          reminder_minutes: formData.reminder_minutes,
+          notified: false, // Reset notification status when schedule is updated
+        })
+        .eq('id', editingSchedule.id);
 
-    if (error) {
-      console.error('Error creating schedule:', error);
-      toast.error('Failed to create schedule');
+      if (error) {
+        console.error('Error updating schedule:', error);
+        toast.error('Failed to update schedule');
+      } else {
+        toast.success('Schedule updated!');
+        resetForm();
+        fetchSchedules();
+      }
     } else {
-      toast.success('Schedule created!');
-      setFormData({
-        title: '',
-        description: '',
-        event_type: 'interview',
-        scheduled_at: '',
-        reminder_minutes: 15,
+      // Create new schedule
+      const { error } = await supabase.from('schedules').insert({
+        user_id: user.id,
+        title: formData.title,
+        description: formData.description || null,
+        event_type: formData.event_type,
+        scheduled_at: isoString,
+        reminder_minutes: formData.reminder_minutes,
       });
-      setShowForm(false);
-      fetchSchedules();
+
+      if (error) {
+        console.error('Error creating schedule:', error);
+        toast.error('Failed to create schedule');
+      } else {
+        toast.success('Schedule created!');
+        resetForm();
+        fetchSchedules();
+      }
     }
     setLoading(false);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '',
+      description: '',
+      event_type: 'interview',
+      scheduled_at: '',
+      reminder_minutes: 15,
+    });
+    setShowForm(false);
+    setEditingSchedule(null);
+  };
+
+  const handleEdit = (schedule: Schedule) => {
+    // Convert ISO string to datetime-local format
+    const date = new Date(schedule.scheduled_at);
+    const localDatetime = date.toISOString().slice(0, 16);
+    
+    setFormData({
+      title: schedule.title,
+      description: schedule.description || '',
+      event_type: schedule.event_type,
+      scheduled_at: localDatetime,
+      reminder_minutes: schedule.reminder_minutes,
+    });
+    setEditingSchedule(schedule);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -261,11 +298,11 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
               </Select>
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="flex-1">
+              <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
                 Cancel
               </Button>
               <Button type="submit" disabled={loading} className="flex-1">
-                {loading ? 'Creating...' : 'Create'}
+                {loading ? (editingSchedule ? 'Updating...' : 'Creating...') : (editingSchedule ? 'Update' : 'Create')}
               </Button>
             </div>
           </form>
@@ -309,14 +346,24 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
                             </span>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                          onClick={() => handleDelete(schedule.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                            onClick={() => handleEdit(schedule)}
+                          >
+                            <Pencil className="w-4 h-4 text-primary" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                            onClick={() => handleDelete(schedule.id)}
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}

@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
-import { ChevronRight, Clock, Target, BarChart3 } from 'lucide-react';
+import { ChevronRight, Clock, Target, BarChart3, Eye } from 'lucide-react';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { InterviewSession } from '@/hooks/useInterviewSessions';
 
 interface InterviewHistoryProps {
@@ -39,12 +40,21 @@ export function InterviewHistory({ sessions }: InterviewHistoryProps) {
         <h3 className="font-display text-lg font-semibold text-foreground">
           Interview History
         </h3>
-        <Link 
-          to="/interview/setup"
-          className="text-sm text-primary hover:underline flex items-center gap-1"
-        >
-          New Interview <ChevronRight className="w-4 h-4" />
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link 
+            to="/interview/results"
+            className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
+          >
+            <Eye className="w-4 h-4" />
+            View Results
+          </Link>
+          <Link 
+            to="/interview/setup"
+            className="text-sm text-primary hover:underline flex items-center gap-1"
+          >
+            New Interview <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
       
       <div className="space-y-3">
@@ -54,7 +64,7 @@ export function InterviewHistory({ sessions }: InterviewHistoryProps) {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+            className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
           >
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
@@ -73,7 +83,19 @@ export function InterviewHistory({ sessions }: InterviewHistoryProps) {
             </div>
             
             <div className="flex items-center gap-4">
-              {session.overall_score && (
+              {session.status === 'completed' && (
+                <Link to="/interview/results">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Eye className="w-4 h-4 mr-1" />
+                    View
+                  </Button>
+                </Link>
+              )}
+              {session.overall_score !== null && session.overall_score !== undefined && (
                 <div className={`text-lg font-bold ${
                   session.overall_score >= 80 ? 'text-green-400' :
                   session.overall_score >= 60 ? 'text-yellow-400' :
