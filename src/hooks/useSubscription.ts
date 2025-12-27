@@ -34,8 +34,24 @@ export const useSubscription = () => {
   });
 
   const checkSubscription = useCallback(async () => {
-    if (!user || !session?.access_token) {
-      setStatus(prev => ({ ...prev, loading: false, isAdmin: false }));
+    // Logged out
+    if (!user) {
+      setStatus(prev => ({
+        ...prev,
+        subscribed: false,
+        productId: null,
+        subscriptionEnd: null,
+        subscriptionId: null,
+        loading: false,
+        error: null,
+        isAdmin: false,
+      }));
+      return;
+    }
+
+    // Auth is still initializing (user exists but token not ready yet)
+    if (!session?.access_token) {
+      setStatus(prev => ({ ...prev, loading: true }));
       return;
     }
 
