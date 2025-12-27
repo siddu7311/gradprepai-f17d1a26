@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Sparkles, LayoutDashboard, User, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, X, Sparkles, LayoutDashboard, User, LogOut, ChevronDown, Crown } from 'lucide-react';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -116,6 +116,12 @@ export const Navbar = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem asChild>
+                        <Link to="/subscription" className="cursor-pointer">
+                          <Crown className="w-4 h-4 mr-2" />
+                          Subscription
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link to="/profile" className="cursor-pointer">
                           <User className="w-4 h-4 mr-2" />
                           Profile
@@ -199,6 +205,12 @@ export const Navbar = () => {
                       <GlowButton variant="outline" className="w-full">
                         <LayoutDashboard className="w-4 h-4 mr-2" />
                         Dashboard
+                      </GlowButton>
+                    </Link>
+                    <Link to="/subscription" onClick={() => setIsMobileMenuOpen(false)}>
+                      <GlowButton variant="outline" className="w-full">
+                        <Crown className="w-4 h-4 mr-2" />
+                        Subscription
                       </GlowButton>
                     </Link>
                     <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)}>

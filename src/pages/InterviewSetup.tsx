@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -20,7 +20,9 @@ import {
   CheckCircle2,
   Volume2,
   Hash,
-  BarChart3
+  BarChart3,
+  Crown,
+  Lock
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlassCard } from '@/components/ui/GlassCard';
@@ -28,6 +30,10 @@ import { GlowButton } from '@/components/ui/GlowButton';
 import { Footer } from '@/components/layout/Footer';
 import { Helmet } from 'react-helmet-async';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useAuth } from '@/contexts/AuthContext';
+import { UpgradeModal } from '@/components/ui/UpgradeModal';
+import { supabase } from '@/integrations/supabase/client';
 
 const roles = [
   { id: 'fullstack', name: 'Full Stack Developer', icon: Code2 },
@@ -76,8 +82,12 @@ const interviewers = [
   },
 ];
 
+const FREE_INTERVIEW_LIMIT = 5;
+
 export default function InterviewSetup() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { isPro, loading: subLoading } = useSubscription();
   const [step, setStep] = useState(1);
   const [selection, setSelection] = useState({
     role: '',
@@ -86,11 +96,38 @@ export default function InterviewSetup() {
     questionCount: 5,
     interviewer: '',
   });
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState('');
+  const [interviewCount, setInterviewCount] = useState(0);
   
   const { speak, isSpeaking, cancel } = useSpeechSynthesis();
+
+  // Fetch interview count for the current month
+  useEffect(() => {
+    const fetchInterviewCount = async () => {
+      if (!user) return;
+      
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+      
+      const { count } = await supabase
+        .from('interview_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', startOfMonth.toISOString());
+      
+      setInterviewCount(count || 0);
+    };
+    
+    fetchInterviewCount();
+  }, [user]);
+
+  const remainingFreeInterviews = Math.max(0, FREE_INTERVIEW_LIMIT - interviewCount);
+  const canStartInterview = isPro || remainingFreeInterviews > 0;
   
   const previewVoice = (interviewerId: 'amds' | 'lusy') => {
-    cancel(); // Cancel any ongoing speech
+    cancel();
     const text = interviewerId === 'amds' 
       ? "Hello, I'm AMDS. I'll be conducting your technical interview today."
       : "Hi there! I'm LUSY, and I'm excited to chat with you about your experience!";
@@ -100,10 +137,21 @@ export default function InterviewSetup() {
     speak(text, settings);
   };
 
+  const showUpgrade = (feature: string) => {
+    setUpgradeFeature(feature);
+    setShowUpgradeModal(true);
+  };
+
   const handleNext = () => {
     if (step < 5) {
       setStep(step + 1);
     } else {
+      // Check if user can start interview
+      if (!canStartInterview) {
+        showUpgrade('Unlimited interviews');
+        return;
+      }
+      
       // Pass the interview configuration to the room
       navigate('/interview/room', {
         state: {
@@ -154,6 +202,27 @@ export default function InterviewSetup() {
               </Link>
               
               <div className="flex items-center gap-4">
+                {/* Interview limit indicator */}
+                {!subLoading && !isPro && (
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 border border-border/50">
+                    <span className="text-sm text-muted-foreground">
+                      {remainingFreeInterviews} / {FREE_INTERVIEW_LIMIT} free interviews
+                    </span>
+                    <button
+                      onClick={() => showUpgrade('Unlimited interviews')}
+                      className="text-primary text-sm font-medium hover:underline"
+                    >
+                      Upgrade
+                    </button>
+                  </div>
+                )}
+                {isPro && (
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/30">
+                    <Crown className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-primary font-medium">Pro</span>
+                  </div>
+                )}
+                
                 <Link 
                   to="/interview/results" 
                   className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
@@ -350,33 +419,56 @@ export default function InterviewSetup() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto">
-                  {questionCountOptions.map((option) => (
-                    <motion.button
-                      key={option.count}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelection({ ...selection, questionCount: option.count })}
-                      className={`p-6 rounded-2xl glass text-center transition-all ${
-                        selection.questionCount === option.count 
-                          ? 'border-2 border-primary shadow-glow' 
-                          : 'border border-glass-border/30 hover:border-primary/50'
-                      }`}
-                    >
-                      <div className={`w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center ${
-                        selection.questionCount === option.count 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted text-muted-foreground'
-                      }`}>
-                        <span className="text-2xl font-bold">{option.count}</span>
-                      </div>
-                      <h3 className="font-display text-base font-semibold text-foreground mb-1">
-                        {option.label}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {option.description}
-                      </p>
-                    </motion.button>
-                  ))}
+                  {questionCountOptions.map((option) => {
+                    const isProOnly = option.count > 5;
+                    const isLocked = isProOnly && !isPro;
+                    
+                    return (
+                      <motion.button
+                        key={option.count}
+                        whileHover={{ scale: isLocked ? 1 : 1.02 }}
+                        whileTap={{ scale: isLocked ? 1 : 0.98 }}
+                        onClick={() => {
+                          if (isLocked) {
+                            showUpgrade('Extended interview sessions');
+                          } else {
+                            setSelection({ ...selection, questionCount: option.count });
+                          }
+                        }}
+                        className={`p-6 rounded-2xl glass text-center transition-all relative ${
+                          selection.questionCount === option.count 
+                            ? 'border-2 border-primary shadow-glow' 
+                            : isLocked
+                            ? 'border border-border/30 opacity-60'
+                            : 'border border-glass-border/30 hover:border-primary/50'
+                        }`}
+                      >
+                        {isLocked && (
+                          <div className="absolute top-2 right-2">
+                            <Lock className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className={`w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center ${
+                          selection.questionCount === option.count 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          <span className="text-2xl font-bold">{option.count}</span>
+                        </div>
+                        <h3 className="font-display text-base font-semibold text-foreground mb-1">
+                          {option.label}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">
+                          {option.description}
+                        </p>
+                        {isLocked && (
+                          <span className="text-xs text-primary font-medium mt-2 inline-flex items-center gap-1">
+                            <Crown className="w-3 h-3" /> Pro
+                          </span>
+                        )}
+                      </motion.button>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}
@@ -481,6 +573,13 @@ export default function InterviewSetup() {
         </main>
         
         <Footer />
+        
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          feature={upgradeFeature}
+        />
       </div>
     </>
   );
