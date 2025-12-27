@@ -114,7 +114,7 @@ export const Navbar = () => {
                         </Avatar>
                         <span className="text-sm text-foreground">My Account</span>
                         {isPro && (
-                          <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 text-xs px-1.5 py-0">
+                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
                             PRO
                           </Badge>
                         )}

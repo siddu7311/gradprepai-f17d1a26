@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
 
 interface MainLayoutProps {
@@ -34,7 +35,7 @@ interface MainLayoutProps {
 export function MainLayout({ children, showFooter = true }: MainLayoutProps) {
   const { user, signOut } = useAuth();
   const { profile } = useProfile();
-  const { isAdmin } = useSubscription();
+  const { isAdmin, isPro } = useSubscription();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -97,6 +98,11 @@ export function MainLayout({ children, showFooter = true }: MainLayoutProps) {
                     <span className="text-sm font-medium text-foreground hidden sm:block">
                       {profile?.display_name || 'My Account'}
                     </span>
+                    {isPro && (
+                      <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                        PRO
+                      </Badge>
+                    )}
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </motion.button>
                 </DropdownMenuTrigger>

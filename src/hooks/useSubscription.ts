@@ -150,6 +150,7 @@ export const useSubscription = () => {
     checkSubscription,
     createCheckout,
     openCustomerPortal,
-    isPro: status.subscribed && (status.productId === PLANS.PRO.product_id || status.isAdmin),
+    // Treat role-based access (admin/moderator) and Stripe subscriptions as Pro.
+    isPro: status.isAdmin || status.subscribed,
   };
 };
