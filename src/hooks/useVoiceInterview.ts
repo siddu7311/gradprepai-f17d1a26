@@ -93,28 +93,28 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
     interimResults: true
   });
 
+  // Track previous speaking state to detect transition
+  const wasAISpeakingRef = useRef(false);
+
   // Auto-start microphone when AI finishes speaking
   useEffect(() => {
-    // Only auto-start when:
-    // 1. AI just finished speaking (isAISpeaking went false)
-    // 2. Interview is active
-    // 3. autoStartMicRef is true (enabled after first question)
-    // 4. Speech recognition is supported
-    // 5. Not currently loading
-    // 6. Not already listening
-    if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading && !isUserSpeaking) {
+    const wasAISpeaking = wasAISpeakingRef.current;
+    wasAISpeakingRef.current = isAISpeaking;
+
+    // Only auto-start when AI just finished speaking (transition from speaking to not speaking)
+    if (wasAISpeaking && !isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading) {
       // Delay to ensure TTS audio has fully stopped and won't be picked up
       const timer = setTimeout(() => {
-        if (!isAISpeaking && isInterviewActive && !isUserSpeaking) {
+        if (!isAISpeaking && isInterviewActive && autoStartMicRef.current) {
           console.log('Auto-starting microphone after AI speech ended');
           resetTranscript();
           setCurrentUserTranscript('');
           startRecognition();
         }
-      }, 700);
+      }, 800);
       return () => clearTimeout(timer);
     }
-  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, isUserSpeaking, startRecognition, resetTranscript]);
+  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, startRecognition, resetTranscript]);
 
   const getVoiceSettings = useCallback((persona: 'amds' | 'lusy') => {
     return persona === 'amds'
