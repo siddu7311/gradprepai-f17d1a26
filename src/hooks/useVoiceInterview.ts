@@ -95,26 +95,39 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
 
   // Track previous speaking state to detect transition
   const wasAISpeakingRef = useRef(false);
+  const autoStartTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-start microphone when AI finishes speaking
   useEffect(() => {
     const wasAISpeaking = wasAISpeakingRef.current;
     wasAISpeakingRef.current = isAISpeaking;
 
+    // Clear any pending auto-start timer
+    if (autoStartTimerRef.current) {
+      clearTimeout(autoStartTimerRef.current);
+      autoStartTimerRef.current = null;
+    }
+
     // Only auto-start when AI just finished speaking (transition from speaking to not speaking)
     if (wasAISpeaking && !isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading) {
       // Delay to ensure TTS audio has fully stopped and won't be picked up
-      const timer = setTimeout(() => {
-        if (!isAISpeaking && isInterviewActive && autoStartMicRef.current) {
+      autoStartTimerRef.current = setTimeout(() => {
+        if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && !isUserSpeaking) {
           console.log('Auto-starting microphone after AI speech ended');
           resetTranscript();
           setCurrentUserTranscript('');
           startRecognition();
         }
-      }, 800);
-      return () => clearTimeout(timer);
+      }, 1000); // Increased delay for better reliability
     }
-  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, startRecognition, resetTranscript]);
+
+    return () => {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
+    };
+  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, isUserSpeaking, startRecognition, resetTranscript]);
 
   const getVoiceSettings = useCallback((persona: 'amds' | 'lusy') => {
     return persona === 'amds'
@@ -380,6 +393,9 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+      }
       cancelSpeech();
       stopRecognition();
     };
