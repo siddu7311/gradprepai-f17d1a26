@@ -29,8 +29,8 @@ export default function SignUp() {
     e.preventDefault();
     setIsLoading(true);
     
-    const redirectUrl = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({
+    const redirectUrl = `${window.location.origin}/verify-email`;
+    const { error, data } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
       options: {
@@ -46,6 +46,18 @@ export default function SignUp() {
         variant: "destructive",
       });
       setIsLoading(false);
+      return;
+    }
+
+    // Check if email confirmation is required
+    if (data.user && !data.session) {
+      // Email confirmation is required
+      toast({
+        title: "Check your email",
+        description: "We've sent you a verification link to confirm your account.",
+      });
+      setIsLoading(false);
+      navigate('/verify-email');
       return;
     }
     
