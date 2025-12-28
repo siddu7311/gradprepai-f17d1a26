@@ -149,7 +149,7 @@ export default function SignIn() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="amdsiddu@gmail.com"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="pl-10 bg-muted/50 border-glass-border/50 focus:border-primary/50"
