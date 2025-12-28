@@ -88,24 +88,49 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}):
       // Only set error for actual problems, not normal end or no-speech
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         setError(event.error);
+        // Don't stop listening on recoverable errors
+      }
+      
+      // For no-speech, we should keep listening if continuous mode is on
+      if (event.error === 'no-speech' && shouldRestartRef.current && continuous) {
+        console.log('No speech detected, will restart...');
       }
     };
 
     recognition.onend = () => {
+      console.log('Speech recognition ended, shouldRestart:', shouldRestartRef.current);
       isStartedRef.current = false;
       setInterimTranscript('');
       
       // Auto-restart if still supposed to be listening (for continuous mode)
       if (shouldRestartRef.current && continuous) {
-        console.log('Restarting speech recognition...');
-        try {
-          recognition.start();
-          isStartedRef.current = true;
-        } catch (err) {
-          console.error('Failed to restart recognition:', err);
-          setIsListening(false);
-          shouldRestartRef.current = false;
-        }
+        // Add a small delay before restarting to prevent rapid restart loops
+        setTimeout(() => {
+          if (shouldRestartRef.current && recognitionRef.current) {
+            console.log('Restarting speech recognition...');
+            try {
+              recognitionRef.current.start();
+              isStartedRef.current = true;
+              setIsListening(true);
+            } catch (err) {
+              console.error('Failed to restart recognition:', err);
+              // If we get an error, try again after a longer delay
+              setTimeout(() => {
+                if (shouldRestartRef.current && recognitionRef.current && !isStartedRef.current) {
+                  try {
+                    recognitionRef.current.start();
+                    isStartedRef.current = true;
+                    setIsListening(true);
+                  } catch (retryErr) {
+                    console.error('Retry failed:', retryErr);
+                    setIsListening(false);
+                    shouldRestartRef.current = false;
+                  }
+                }
+              }, 500);
+            }
+          }
+        }, 100);
       } else {
         setIsListening(false);
         onEnd?.();
