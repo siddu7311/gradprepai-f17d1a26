@@ -45,6 +45,8 @@ const Admin = () => {
   const [roles, setRoles] = useState<UserRole[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [enterpriseRequests, setEnterpriseRequests] = useState<EnterpriseRequest[]>([]);
+  const [adminUsers, setAdminUsers] = useState<Array<{ id: string; email: string | null }>>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'moderator'>('admin');
   const [loading, setLoading] = useState(true);
@@ -81,12 +83,16 @@ const Admin = () => {
 
       if (rolesError) throw rolesError;
 
-      // Fetch all profiles
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('user_id, email, display_name');
+      // Fetch all users (admin-only backend function)
+      const { data: usersPayload, error: usersError } = await supabase.functions.invoke('admin-users');
+      if (usersError) throw usersError;
 
-      if (profilesError) throw profilesError;
+      const users = (usersPayload?.users || []) as Array<{ id: string; email: string | null }>;
+      const total = typeof usersPayload?.total === 'number' ? usersPayload.total : users.length;
+
+      setAdminUsers(users);
+      setTotalUsers(total);
+      setProfiles(users.map((u) => ({ user_id: u.id, email: u.email, display_name: null })));
 
       // Fetch enterprise requests
       const { data: requestsData, error: requestsError } = await supabase
@@ -96,18 +102,17 @@ const Admin = () => {
 
       if (requestsError) throw requestsError;
 
-      setProfiles(profilesData || []);
       setEnterpriseRequests(requestsData || []);
-      
-      // Merge roles with email from profiles
-      const rolesWithEmail = (rolesData || []).map(role => {
-        const profile = profilesData?.find(p => p.user_id === role.user_id);
+
+      // Merge roles with email from users list
+      const rolesWithEmail = (rolesData || []).map((role) => {
+        const u = users.find((x) => x.id === role.user_id);
         return {
           ...role,
-          email: profile?.email || 'Unknown'
+          email: u?.email || 'Unknown',
         };
       });
-      
+
       setRoles(rolesWithEmail);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -177,20 +182,16 @@ const Admin = () => {
 
     setAdding(true);
     try {
-      // Find user by email in profiles
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('email', newEmail.trim().toLowerCase())
-        .single();
+      const email = newEmail.trim().toLowerCase();
+      const foundUser = adminUsers.find((u) => (u.email || '').toLowerCase() === email);
 
-      if (profileError || !profile) {
+      if (!foundUser) {
         toast.error('User not found. They must sign up first.');
         return;
       }
 
       // Check if role already exists
-      const existingRole = roles.find(r => r.user_id === profile.user_id && r.role === newRole);
+      const existingRole = roles.find((r) => r.user_id === foundUser.id && r.role === newRole);
       if (existingRole) {
         toast.error('User already has this role');
         return;
@@ -199,7 +200,7 @@ const Admin = () => {
       // Add the role
       const { error } = await supabase
         .from('user_roles')
-        .insert({ user_id: profile.user_id, role: newRole });
+        .insert({ user_id: foundUser.id, role: newRole });
 
       if (error) throw error;
 
@@ -276,7 +277,7 @@ const Admin = () => {
             <CardContent>
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
-                <span className="text-2xl font-bold">{profiles.length}</span>
+                <span className="text-2xl font-bold">{totalUsers}</span>
               </div>
             </CardContent>
           </Card>
