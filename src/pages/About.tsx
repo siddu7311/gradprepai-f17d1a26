@@ -1,10 +1,68 @@
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { Target, Heart, Users, Lightbulb } from 'lucide-react';
+import { Target, Heart, Users, Lightbulb, Instagram, Mail, Facebook, Linkedin } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlassCard } from '@/components/ui/GlassCard';
+
+const developers = [
+  {
+    name: 'Amd Siddu',
+    role: 'Lead Developer',
+    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
+    socials: {
+      instagram: '#',
+      gmail: 'mailto:amdsiddu@gmail.com',
+      facebook: '#',
+      linkedin: '#',
+    },
+  },
+  {
+    name: 'Priya Sharma',
+    role: 'Frontend Developer',
+    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=300&fit=crop&crop=face',
+    socials: {
+      instagram: '#',
+      gmail: 'mailto:priya@gmail.com',
+      facebook: '#',
+      linkedin: '#',
+    },
+  },
+  {
+    name: 'Rahul Kumar',
+    role: 'Backend Developer',
+    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face',
+    socials: {
+      instagram: '#',
+      gmail: 'mailto:rahul@gmail.com',
+      facebook: '#',
+      linkedin: '#',
+    },
+  },
+  {
+    name: 'Ananya Patel',
+    role: 'AI Engineer',
+    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&crop=face',
+    socials: {
+      instagram: '#',
+      gmail: 'mailto:ananya@gmail.com',
+      facebook: '#',
+      linkedin: '#',
+    },
+  },
+  {
+    name: 'Vikram Singh',
+    role: 'DevOps Engineer',
+    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face',
+    socials: {
+      instagram: '#',
+      gmail: 'mailto:vikram@gmail.com',
+      facebook: '#',
+      linkedin: '#',
+    },
+  },
+];
 
 const values = [
   {
@@ -81,6 +139,68 @@ const About = () => {
                   </p>
                 </div>
               </GlassCard>
+            </motion.div>
+
+            {/* Developers Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              className="mb-20"
+            >
+              <h2 className="font-display text-3xl font-bold text-center text-foreground mb-12">Our Developers</h2>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+                {developers.map((dev, index) => (
+                  <motion.div
+                    key={dev.name}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3 + index * 0.1 }}
+                  >
+                    <GlassCard className="h-full text-center p-6">
+                      <div className="relative mx-auto mb-4 w-24 h-24 rounded-full overflow-hidden ring-2 ring-primary/30">
+                        <img 
+                          src={dev.image} 
+                          alt={dev.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <h3 className="font-display text-lg font-semibold text-foreground mb-1">{dev.name}</h3>
+                      <p className="text-muted-foreground text-sm mb-4">{dev.role}</p>
+                      <div className="flex justify-center gap-3">
+                        <a 
+                          href={dev.socials.instagram} 
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          aria-label={`${dev.name}'s Instagram`}
+                        >
+                          <Instagram className="w-5 h-5" />
+                        </a>
+                        <a 
+                          href={dev.socials.gmail} 
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          aria-label={`Email ${dev.name}`}
+                        >
+                          <Mail className="w-5 h-5" />
+                        </a>
+                        <a 
+                          href={dev.socials.facebook} 
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          aria-label={`${dev.name}'s Facebook`}
+                        >
+                          <Facebook className="w-5 h-5" />
+                        </a>
+                        <a 
+                          href={dev.socials.linkedin} 
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          aria-label={`${dev.name}'s LinkedIn`}
+                        >
+                          <Linkedin className="w-5 h-5" />
+                        </a>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                ))}
+              </div>
             </motion.div>
 
             {/* Values Grid */}

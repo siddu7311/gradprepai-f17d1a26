@@ -142,7 +142,7 @@ export const EnterpriseRequestModal = ({ isOpen, onClose }: EnterpriseRequestMod
                   <Label htmlFor="name">Your Name *</Label>
                   <Input
                     id="name"
-                    placeholder="John Doe"
+                    placeholder="Amd Siddu"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                     required
