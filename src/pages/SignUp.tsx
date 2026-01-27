@@ -40,6 +40,18 @@ export default function SignUp() {
     });
     
     if (error) {
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('already registered')) {
+        toast({
+          title: "Account already exists",
+          description: "This email is already registered. Please sign in, or use 'Forgot password?' to set a password if you previously used Google sign-in.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        navigate('/signin');
+        return;
+      }
+
       toast({
         title: "Sign up failed",
         description: error.message,

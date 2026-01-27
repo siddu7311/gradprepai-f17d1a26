@@ -36,9 +36,13 @@ export default function SignIn() {
     });
     
     if (error) {
+      const msg = (error.message || '').toLowerCase();
       toast({
         title: "Sign in failed",
-        description: error.message,
+        description:
+          msg.includes('invalid login credentials')
+            ? "Invalid login credentials. If you previously signed up with Google, use 'Continue with Google' or click 'Forgot password?' to set a password for this email."
+            : error.message,
         variant: "destructive",
       });
       setIsLoading(false);
