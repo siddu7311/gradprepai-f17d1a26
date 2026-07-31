@@ -18,50 +18,6 @@ const developers = [
       linkedin: '#',
     },
   },
-  {
-    name: 'Chandu Kumar Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:chandu@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Dhanavardhan Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:dhanavardhan@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Harsha Vardhan',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:harsha@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Pavan Kumar Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:pavan@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
 ];
 
 const values = [
@@ -148,8 +104,8 @@ const About = () => {
               transition={{ duration: 0.6, delay: 0.25 }}
               className="mb-20"
             >
-              <h2 className="font-display text-3xl font-bold text-center text-foreground mb-12">Our Developers</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+              <h2 className="font-display text-3xl font-bold text-center text-foreground mb-12">Our Developer</h2>
+              <div className="flex justify-center max-w-7xl mx-auto">
                 {developers.map((dev, index) => (
                   <motion.div
                     key={dev.name}
