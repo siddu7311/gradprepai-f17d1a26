@@ -8,7 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { format, differenceInMinutes } from 'date-fns';
+import { format } from 'date-fns';
+import { requestNotificationPermission } from '@/hooks/useScheduleNotifications';
 
 interface Schedule {
   id: string;
@@ -30,6 +31,9 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
   const [showForm, setShowForm] = useState(false);
   const [editingSchedule, setEditingSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(false);
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied',
+  );
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,54 +47,16 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
     }
   }, [user]);
 
-  // Check for upcoming events and notify
-  useEffect(() => {
-    const checkNotifications = () => {
-      const now = new Date();
-      schedules.forEach(async (schedule) => {
-        if (schedule.notified) return;
-        
-        const eventTime = new Date(schedule.scheduled_at);
-        const minutesUntil = differenceInMinutes(eventTime, now);
-        
-        if (minutesUntil <= schedule.reminder_minutes && minutesUntil > 0) {
-          // Show notification
-          toast.info(`Upcoming: ${schedule.title}`, {
-            description: `Starting in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
-            duration: 10000,
-          });
-          
-          // Also show browser notification if permitted
-          if (Notification.permission === 'granted') {
-            new Notification(`Upcoming: ${schedule.title}`, {
-              body: `Starting in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`,
-              icon: '/favicon.ico',
-            });
-          }
-          
-          // Mark as notified
-          await supabase
-            .from('schedules')
-            .update({ notified: true })
-            .eq('id', schedule.id);
-          
-          setSchedules(prev => 
-            prev.map(s => s.id === schedule.id ? { ...s, notified: true } : s)
-          );
-        }
-      });
-    };
-
-    // Request notification permission
-    if (Notification.permission === 'default') {
-      Notification.requestPermission();
+  // Reminder delivery itself is handled app-wide by useScheduleNotifications().
+  const handleEnableNotifications = async () => {
+    const result = await requestNotificationPermission();
+    setPermission(result);
+    if (result === 'granted') {
+      toast.success('Reminders enabled — alerts arrive even on other tabs.');
+    } else {
+      toast.error('Notifications are blocked. Allow them in your browser site settings.');
     }
-
-    const interval = setInterval(checkNotifications, 30000); // Check every 30 seconds
-    checkNotifications(); // Check immediately
-
-    return () => clearInterval(interval);
-  }, [schedules]);
+  };
 
   const fetchSchedules = async () => {
     const { data, error } = await supabase
@@ -228,6 +194,20 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
       </div>
 
       <div className="p-4">
+        {user && permission !== 'granted' && (
+          <button
+            type="button"
+            onClick={handleEnableNotifications}
+            className="w-full mb-3 flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-left text-xs text-foreground hover:bg-primary/20 transition-colors"
+          >
+            <Bell className="w-4 h-4 text-primary shrink-0" />
+            <span>
+              {permission === 'denied'
+                ? 'Notifications blocked — allow them in browser settings to get reminders.'
+                : 'Enable browser notifications to get reminders while using other tabs or apps.'}
+            </span>
+          </button>
+        )}
         {!user ? (
           <p className="text-muted-foreground text-sm text-center py-4">
             Please sign in to manage your schedules

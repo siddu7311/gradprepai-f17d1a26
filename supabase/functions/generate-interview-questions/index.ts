@@ -27,12 +27,22 @@ serve(async (req) => {
   }
 
   try {
-    const { role, language, difficulty, persona, questionCount = 5 } = await req.json() as {
+    const {
+      role,
+      language,
+      difficulty,
+      persona,
+      questionCount = 5,
+      previousQuestions = [],
+      seed,
+    } = await req.json() as {
       role: string;
       language: string;
       difficulty: string;
       persona: keyof typeof PERSONA_PROMPTS;
       questionCount?: number;
+      previousQuestions?: string[];
+      seed?: string;
     };
 
     console.log('Generating interview questions for:', { role, language, difficulty, persona, questionCount });
@@ -50,12 +60,38 @@ serve(async (req) => {
       advanced: 'complex system design, architecture decisions, and advanced concepts'
     };
 
+    const focusAreas = [
+      'core language semantics and gotchas',
+      'data structures and algorithmic thinking',
+      'debugging a real production incident',
+      'API and interface design trade-offs',
+      'testing strategy and code quality',
+      'performance profiling and optimisation',
+      'concurrency, async behaviour or scheduling',
+      'memory / resource management',
+      'security and input validation',
+      'system design and scalability',
+      'tooling, build and deployment workflow',
+      'refactoring legacy code',
+      'collaboration and code review behaviour',
+      'data modelling and persistence',
+      'error handling and observability',
+    ];
+    // Deterministically shuffle focus areas per request so every session covers new ground.
+    const shuffled = [...focusAreas].sort(() => Math.random() - 0.5).slice(0, Math.max(3, questionCount));
+
     const systemPrompt = `${personaPrompt}
 
-You generate interview questions in JSON format only. No markdown, no extra text.`;
+You generate interview questions in JSON format only. No markdown, no extra text.
+You never repeat questions you have been told to avoid, and you never reuse stock/templated openers.`;
 
-    const userPrompt = `Generate ${questionCount} interview questions for a ${role} position focusing on ${language}. 
+    const userPrompt = `Generate ${questionCount} DISTINCT interview questions for a ${role} position focusing on ${language}.
 The difficulty level is ${difficulty} (${difficultyDescriptions[difficulty] || difficultyDescriptions.intermediate}).
+
+Session variety token (use it to make this set unique): ${seed || crypto.randomUUID()}
+Cover a different focus area per question, drawn from: ${shuffled.join('; ')}.
+Each question must be specific and ${language}-flavoured — reference concrete ${language} features, tools, or scenarios rather than generic phrasing.
+${previousQuestions.length ? `DO NOT ask any of these previously asked questions, or close paraphrases of them:\n- ${previousQuestions.slice(-40).join('\n- ')}` : ''}
 
 Format your response as a JSON array of objects with the following structure:
 [
@@ -79,7 +115,8 @@ Only respond with the JSON array, no other text.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3.6-flash',
+        temperature: 1.1,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }

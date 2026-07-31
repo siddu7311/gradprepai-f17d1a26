@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useAIVoice } from '@/hooks/useAIVoice';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -38,7 +38,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
-  const { speak, cancel, isSpeaking } = useSpeechSynthesis();
+  const { speak, cancel, isSpeaking } = useAIVoice();
   const {
     isListening,
     transcript,
@@ -125,7 +125,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
 
       // If user used voice, reply with voice too
       if (fromVoice && isVoiceMode) {
-        speak(data.message, { voice: 'female' });
+        void speak(data.message, { persona: 'lusy' });
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -175,7 +175,7 @@ const LusyChatbot = ({ onClose }: LusyChatbotProps) => {
     if (isSpeaking) {
       cancel();
     } else {
-      speak(text, { voice: 'female' });
+      void speak(text, { persona: 'lusy' });
     }
   };
 

@@ -42,7 +42,36 @@ serve(async (req) => {
 
     const feedbackStyle = PERSONA_FEEDBACK_STYLES[persona] || PERSONA_FEEDBACK_STYLES.lusy;
 
-    const systemPrompt = `You are an AI interviewer analyzing a candidate's response. You provide feedback in JSON format only.`;
+    const trimmedAnswer = (answer || '').trim();
+    const wordCount = trimmedAnswer ? trimmedAnswer.split(/\s+/).length : 0;
+
+    // Hard guard: never award marks for a missing or non-answer.
+    if (wordCount < 3) {
+      return new Response(
+        JSON.stringify({
+          score: 0,
+          technicalScore: 0,
+          communicationScore: 0,
+          problemSolvingScore: 0,
+          confidenceScore: 0,
+          feedback: "I didn't catch an answer for that one, so I can't score it. Take a moment and give it another try.",
+          strengths: [],
+          improvements: ['Provide a spoken answer to the question so it can be evaluated.'],
+          topicsCovered: [],
+          success: true,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const systemPrompt = `You are a strict but fair technical interviewer grading a candidate's spoken answer. You reply with JSON only.
+
+Grading rules (follow exactly):
+- Score ONLY what the candidate actually said. Never invent content or assume intent.
+- If the answer is empty, off-topic, filler ("um", "I don't know", "next"), or unrelated to the question, score 0-1 and say so plainly.
+- Partially correct but shallow answers score 3-5. Solid answers score 6-8. Only genuinely complete, accurate, well-reasoned answers score 9-10.
+- The answer is a speech transcript, so ignore punctuation, filler words and small transcription errors; judge the substance.
+- Never give a score at random or as encouragement. Scores must be justified by the quoted answer.`;
 
     const userPrompt = `You are analyzing a candidate's response for a ${role} position.
 
@@ -56,7 +85,11 @@ ${feedbackStyle}
 
 Provide a JSON response with:
 {
-  "score": <number 1-10>,
+  "score": <number 0-10 overall, per the grading rules>,
+  "technicalScore": <number 0-10 technical accuracy and depth>,
+  "communicationScore": <number 0-10 clarity and structure of the spoken answer>,
+  "problemSolvingScore": <number 0-10 reasoning and approach>,
+  "confidenceScore": <number 0-10 decisiveness, based only on what was said>,
   "feedback": "<brief spoken feedback to give the candidate>",
   "strengths": ["<strength1>", "<strength2>"],
   "improvements": ["<improvement1>", "<improvement2>"],
@@ -64,6 +97,7 @@ Provide a JSON response with:
   "followUpQuestion": "<optional follow-up question if needed>"
 }
 
+If the candidate did not really answer, return zeros with empty strengths.
 Only respond with the JSON object, no other text.`;
 
     console.log('Sending request to Lovable AI Gateway...');
@@ -75,7 +109,8 @@ Only respond with the JSON object, no other text.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-3.6-flash',
+        temperature: 0.2,
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
