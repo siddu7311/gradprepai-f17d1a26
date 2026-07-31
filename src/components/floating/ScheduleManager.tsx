@@ -194,6 +194,20 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
       </div>
 
       <div className="p-4">
+        {user && permission !== 'granted' && (
+          <button
+            type="button"
+            onClick={handleEnableNotifications}
+            className="w-full mb-3 flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-left text-xs text-foreground hover:bg-primary/20 transition-colors"
+          >
+            <Bell className="w-4 h-4 text-primary shrink-0" />
+            <span>
+              {permission === 'denied'
+                ? 'Notifications blocked — allow them in browser settings to get reminders.'
+                : 'Enable browser notifications to get reminders while using other tabs or apps.'}
+            </span>
+          </button>
+        )}
         {!user ? (
           <p className="text-muted-foreground text-sm text-center py-4">
             Please sign in to manage your schedules
