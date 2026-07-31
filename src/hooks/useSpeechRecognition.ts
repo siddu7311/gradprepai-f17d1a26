@@ -50,7 +50,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}):
 
   const shouldRestartRef = useRef(false);
   const isStartedRef = useRef(false);
-  const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartCountRef = useRef(0);
   const lastActivityRef = useRef<number>(Date.now());
 

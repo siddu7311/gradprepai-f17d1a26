@@ -95,7 +95,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
 
   // Track previous speaking state to detect transition
   const wasAISpeakingRef = useRef(false);
-  const autoStartTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Auto-start microphone when AI finishes speaking
   useEffect(() => {
