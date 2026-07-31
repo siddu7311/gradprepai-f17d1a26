@@ -3,9 +3,13 @@ import { Calendar, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScheduleManager from './ScheduleManager';
 import LusyChatbot from './LusyChatbot';
+import { useScheduleNotifications } from '@/hooks/useScheduleNotifications';
 
 const FloatingBubbles = () => {
   const [activePanel, setActivePanel] = useState<'schedule' | 'chat' | null>(null);
+
+  // App-wide reminder watcher so notifications fire on any page / background tab.
+  useScheduleNotifications();
 
   const togglePanel = (panel: 'schedule' | 'chat') => {
     setActivePanel(activePanel === panel ? null : panel);
