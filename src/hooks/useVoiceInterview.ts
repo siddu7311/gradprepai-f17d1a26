@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSpeechRecognition } from './useSpeechRecognition';
-import { useSpeechSynthesis } from './useSpeechSynthesis';
+import { useAIVoice } from './useAIVoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,6 +33,10 @@ interface ResponseAnalysis {
   improvements: string[];
   topicsCovered: string[];
   followUpQuestion?: string;
+  communicationScore?: number;
+  problemSolvingScore?: number;
+  confidenceScore?: number;
+  technicalScore?: number;
 }
 
 interface UseVoiceInterviewResult {
@@ -74,7 +78,7 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
   const startTimeRef = useRef<Date | null>(null);
   const userAnswersRef = useRef<Map<number, string>>(new Map());
   const autoStartMicRef = useRef(false);
-  const { speak, isSpeaking: isAISpeaking, cancel: cancelSpeech } = useSpeechSynthesis();
+  const { speak, isSpeaking: isAISpeaking, cancel: cancelSpeech } = useAIVoice();
   
   const handleSpeechResult = useCallback((result: string) => {
     setCurrentUserTranscript(prev => prev + ' ' + result);
@@ -129,20 +133,13 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
     };
   }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, isUserSpeaking, startRecognition, resetTranscript]);
 
-  const getVoiceSettings = useCallback((persona: 'amds' | 'lusy') => {
-    return persona === 'amds'
-      ? { pitch: 0.9, rate: 1.0, voice: 'male' as const }
-      : { pitch: 1.1, rate: 0.95, voice: 'female' as const };
-  }, []);
-
   const speakText = useCallback((text: string, personaOverride?: 'amds' | 'lusy') => {
     // Prevent the browser STT from accidentally transcribing the AI's TTS audio
     stopRecognition();
 
     const persona = personaOverride ?? config?.interviewer ?? 'lusy';
-    const settings = getVoiceSettings(persona);
-    speak(text, settings);
-  }, [config?.interviewer, getVoiceSettings, speak, stopRecognition]);
+    void speak(text, { persona, speed: persona === 'amds' ? 1 : 0.97 });
+  }, [config?.interviewer, speak, stopRecognition]);
 
   const addToTranscript = useCallback((role: 'ai' | 'user', text: string) => {
     setTranscript(prev => [...prev, { role, text, timestamp: new Date() }]);
