@@ -155,6 +155,16 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
     const questionCount = interviewConfig.questionCount || 5;
     autoStartMicRef.current = true;
 
+    // Remember recently asked questions so the AI generates fresh ones every session.
+    const askedKey = `gp_asked_${interviewConfig.role}_${interviewConfig.language}_${interviewConfig.difficulty}`;
+    let previousQuestions: string[] = [];
+    try {
+      previousQuestions = JSON.parse(localStorage.getItem(askedKey) || '[]');
+      if (!Array.isArray(previousQuestions)) previousQuestions = [];
+    } catch {
+      previousQuestions = [];
+    }
+
     try {
       // Create interview session in database
       if (user?.id) {
@@ -184,7 +194,9 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
           language: interviewConfig.language,
           difficulty: interviewConfig.difficulty,
           persona: interviewConfig.interviewer,
-          questionCount
+          questionCount,
+          previousQuestions: previousQuestions.slice(-40),
+          seed: `${Date.now()}-${Math.random().toString(36).slice(2)}`
         }
       });
 
@@ -192,6 +204,17 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
       if (data.error) throw new Error(data.error);
 
       setQuestions(data.questions);
+
+      try {
+        const merged = [
+          ...previousQuestions,
+          ...(data.questions || []).map((q: InterviewQuestion) => q.question),
+        ].slice(-60);
+        localStorage.setItem(askedKey, JSON.stringify(merged));
+      } catch {
+        // localStorage unavailable — variety still handled by the seed
+      }
+
       setIsInterviewActive(true);
       setCurrentQuestion(0);
       setTranscript([]);
@@ -280,8 +303,13 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
 
       // Save result to database with more accurate scoring
       if (user?.id && sessionIdRef.current) {
-        const scorePercent = data.score ? Math.round(data.score * 10) : 0;
-        
+        const clamp = (value: unknown, fallback: number) =>
+          typeof value === 'number' && Number.isFinite(value)
+            ? Math.min(100, Math.max(0, Math.round(value * 10)))
+            : fallback;
+
+        const scorePercent = clamp(data.score, 0);
+
         await supabase.from('interview_results').insert({
           user_id: user.id,
           session_id: sessionIdRef.current,
@@ -292,10 +320,11 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
           feedback: data.feedback,
           strengths: data.strengths || [],
           weaknesses: data.improvements || [],
-          technical_score: scorePercent,
-          communication_score: Math.max(0, scorePercent - 5 + Math.floor(Math.random() * 10)),
-          problem_solving_score: Math.max(0, scorePercent - 3 + Math.floor(Math.random() * 6)),
-          confidence_score: Math.max(0, scorePercent - 7 + Math.floor(Math.random() * 14))
+          // Real per-dimension scores from the analyzer — never randomised.
+          technical_score: clamp(data.technicalScore, scorePercent),
+          communication_score: clamp(data.communicationScore, scorePercent),
+          problem_solving_score: clamp(data.problemSolvingScore, scorePercent),
+          confidence_score: clamp(data.confidenceScore, scorePercent)
         });
 
         // Update session completed questions count
