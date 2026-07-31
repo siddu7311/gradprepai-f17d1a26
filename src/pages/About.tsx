@@ -18,50 +18,6 @@ const developers = [
       linkedin: '#',
     },
   },
-  {
-    name: 'Chandu Kumar Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:chandu@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Dhanavardhan Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:dhanavardhan@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Harsha Vardhan',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:harsha@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
-  {
-    name: 'Pavan Kumar Reddy',
-    role: 'Developer',
-    image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face',
-    socials: {
-      instagram: '#',
-      gmail: 'mailto:pavan@gmail.com',
-      facebook: '#',
-      linkedin: '#',
-    },
-  },
 ];
 
 const values = [
