@@ -104,8 +104,8 @@ const About = () => {
               transition={{ duration: 0.6, delay: 0.25 }}
               className="mb-20"
             >
-              <h2 className="font-display text-3xl font-bold text-center text-foreground mb-12">Our Developers</h2>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
+              <h2 className="font-display text-3xl font-bold text-center text-foreground mb-12">Our Developer</h2>
+              <div className="flex justify-center max-w-7xl mx-auto">
                 {developers.map((dev, index) => (
                   <motion.div
                     key={dev.name}
