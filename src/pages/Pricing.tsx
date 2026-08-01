@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
-import { Check, Sparkles, Zap, Crown, Loader2 } from 'lucide-react';
+import { Check, Sparkles, Zap, Crown } from 'lucide-react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
@@ -12,12 +12,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import { EnterpriseRequestModal } from '@/components/ui/EnterpriseRequestModal';
+import { UpiPaymentModal } from '@/components/ui/UpiPaymentModal';
 
 const plans = [
   {
     name: 'Free',
     description: 'Perfect for getting started',
-    price: '$0',
+    price: '₹0',
     period: 'forever',
     icon: Sparkles,
     features: [
@@ -33,7 +34,7 @@ const plans = [
   {
     name: 'Pro',
     description: 'Best for serious job seekers',
-    price: '$19',
+    price: '₹199',
     period: 'per month',
     icon: Zap,
     features: [
@@ -45,7 +46,7 @@ const plans = [
       'Priority support',
       'Interview recording & playback',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Pay with UPI QR',
     popular: true,
   },
   {
@@ -70,12 +71,12 @@ const plans = [
 
 const Pricing = () => {
   const { user } = useAuth();
-  const { isPro, createCheckout, loading: subscriptionLoading } = useSubscription();
+  const { isPro, loading: subscriptionLoading } = useSubscription();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [enterpriseModalOpen, setEnterpriseModalOpen] = useState(false);
+  const [payModalOpen, setPayModalOpen] = useState(false);
 
   const canceled = searchParams.get('canceled') === 'true';
 
@@ -88,7 +89,7 @@ const Pricing = () => {
     }
   }, [canceled, toast]);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = () => {
     if (!user) {
       navigate('/signin?redirect=/pricing');
       return;
@@ -99,18 +100,7 @@ const Pricing = () => {
       return;
     }
 
-    try {
-      setCheckoutLoading(true);
-      await createCheckout();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start checkout. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setCheckoutLoading(false);
-    }
+    setPayModalOpen(true);
   };
 
   const handleEnterpriseClick = () => {
@@ -123,7 +113,6 @@ const Pricing = () => {
 
   const getButtonText = (plan: typeof plans[0]) => {
     if (plan.name === 'Pro') {
-      if (checkoutLoading) return <Loader2 className="w-4 h-4 animate-spin" />;
       if (isPro) return 'Your Current Plan';
       return plan.cta;
     }
@@ -216,7 +205,7 @@ const Pricing = () => {
                         variant="primary"
                         className="w-full"
                         onClick={getButtonAction(plan)}
-                        disabled={checkoutLoading || subscriptionLoading}
+                        disabled={subscriptionLoading}
                       >
                         {getButtonText(plan)}
                       </GlowButton>
@@ -254,6 +243,11 @@ const Pricing = () => {
         <EnterpriseRequestModal 
           isOpen={enterpriseModalOpen} 
           onClose={() => setEnterpriseModalOpen(false)} 
+        />
+
+        <UpiPaymentModal
+          isOpen={payModalOpen}
+          onClose={() => setPayModalOpen(false)}
         />
       </div>
     </>
