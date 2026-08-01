@@ -262,6 +262,51 @@ export type Database = {
         }
         Relationships: []
       }
+      upi_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          email: string | null
+          expires_at: string
+          id: string
+          payer_phone: string | null
+          plan: string
+          starts_at: string
+          status: string
+          upi_reference: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          payer_phone?: string | null
+          plan?: string
+          starts_at?: string
+          status?: string
+          upi_reference: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          email?: string | null
+          expires_at?: string
+          id?: string
+          payer_phone?: string | null
+          plan?: string
+          starts_at?: string
+          status?: string
+          upi_reference?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
