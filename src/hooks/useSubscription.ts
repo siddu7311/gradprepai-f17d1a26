@@ -14,12 +14,24 @@ export interface SubscriptionStatus {
 
 export const PLANS = {
   PRO: {
-    price_id: "price_1Sj0054VE76aSwNJFdx4JAfm",
-    product_id: "prod_TgMj9QgQPxh7aY",
     name: "Pro",
-    price: 19,
+    price: 199,
+    currency: "INR",
+    priceLabel: "₹199",
   }
 };
+
+export const PAYMENT_WHATSAPP_NUMBER = "917330976371";
+
+export interface UpiPaymentResult {
+  success: boolean;
+  payment_id: string;
+  email: string;
+  amount: number;
+  upi_reference: string;
+  starts_at: string;
+  expires_at: string;
+}
 
 export const useSubscription = () => {
   const { user, session } = useAuth();
@@ -85,40 +97,31 @@ export const useSubscription = () => {
     }
   }, [user, session?.access_token]);
 
-  const createCheckout = async () => {
+  /**
+   * Submits a UPI / PhonePe QR payment reference. On success the account is
+   * upgraded to Pro immediately for 30 days.
+   */
+  const submitUpiPayment = async (payload: { upi_reference: string; payer_phone?: string }) => {
     if (!session?.access_token) {
       throw new Error('Not authenticated');
     }
 
-    const { data, error } = await supabase.functions.invoke('create-checkout', {
+    const { data, error } = await supabase.functions.invoke('submit-upi-payment', {
       headers: {
         Authorization: `Bearer ${session.access_token}`,
+      },
+      body: {
+        upi_reference: payload.upi_reference,
+        payer_phone: payload.payer_phone ?? null,
+        amount: PLANS.PRO.price,
       },
     });
 
     if (error) throw error;
-    if (data?.url) {
-      window.open(data.url, '_blank');
-    }
-    return data;
-  };
+    if (data?.error) throw new Error(data.error);
 
-  const openCustomerPortal = async () => {
-    if (!session?.access_token) {
-      throw new Error('Not authenticated');
-    }
-
-    const { data, error } = await supabase.functions.invoke('customer-portal', {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (error) throw error;
-    if (data?.url) {
-      window.open(data.url, '_blank');
-    }
-    return data;
+    await checkSubscription();
+    return data as UpiPaymentResult;
   };
 
   useEffect(() => {
@@ -148,8 +151,7 @@ export const useSubscription = () => {
   return {
     ...status,
     checkSubscription,
-    createCheckout,
-    openCustomerPortal,
+    submitUpiPayment,
     // Treat role-based access (admin/moderator) and Stripe subscriptions as Pro.
     isPro: status.isAdmin || status.subscribed,
   };
