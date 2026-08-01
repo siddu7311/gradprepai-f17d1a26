@@ -1,24 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { Check, Crown, RefreshCw, ExternalLink, Sparkles, Calendar, CreditCard } from 'lucide-react';
+import { Check, Crown, RefreshCw, Sparkles, Calendar, QrCode } from 'lucide-react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { useSubscription, PLANS } from '@/hooks/useSubscription';
+import { UpiPaymentModal } from '@/components/ui/UpiPaymentModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 
 const Subscription = () => {
   const { user, loading: authLoading } = useAuth();
-  const { subscribed, isPro, subscriptionEnd, loading, checkSubscription, openCustomerPortal, createCheckout } = useSubscription();
+  const { isPro, subscriptionEnd, loading, checkSubscription } = useSubscription();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [payModalOpen, setPayModalOpen] = useState(false);
   
   const success = searchParams.get('success') === 'true';
 
@@ -39,29 +41,7 @@ const Subscription = () => {
     }
   }, [user, authLoading, navigate]);
 
-  const handleManageSubscription = async () => {
-    try {
-      await openCustomerPortal();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to open subscription management. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleUpgrade = async () => {
-    try {
-      await createCheckout();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start checkout. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
+  const handleUpgrade = () => setPayModalOpen(true);
 
   if (authLoading || loading) {
     return (
@@ -135,7 +115,7 @@ const Subscription = () => {
                   </div>
                   <div className="text-right">
                     <div className="font-display text-3xl font-bold gradient-text">
-                      {isPro ? '$19' : '$0'}
+                      {isPro ? `₹${PLANS.PRO.price}` : '₹0'}
                     </div>
                     <div className="text-muted-foreground text-sm">
                       {isPro ? 'per month' : 'forever'}
@@ -148,7 +128,7 @@ const Subscription = () => {
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="w-4 h-4" />
                       <span>
-                        Next billing date: {format(new Date(subscriptionEnd), 'MMMM d, yyyy')}
+                        Pro access valid till: {format(new Date(subscriptionEnd), 'MMMM d, yyyy')}
                       </span>
                     </div>
                   </div>
@@ -157,13 +137,13 @@ const Subscription = () => {
                 <div className="mt-6 flex flex-wrap gap-3">
                   {isPro ? (
                     <>
-                      <GlowButton onClick={handleManageSubscription} variant="outline">
-                        <CreditCard className="w-4 h-4 mr-2" />
-                        Manage Billing
-                      </GlowButton>
                       <GlowButton onClick={() => checkSubscription()} variant="ghost">
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh Status
+                      </GlowButton>
+                      <GlowButton onClick={handleUpgrade} variant="outline">
+                        <QrCode className="w-4 h-4 mr-2" />
+                        Renew with UPI QR
                       </GlowButton>
                     </>
                   ) : (
@@ -208,8 +188,8 @@ const Subscription = () => {
                 {!isPro && (
                   <div className="mt-8 pt-6 border-t border-border/50">
                     <GlowButton onClick={handleUpgrade} className="w-full">
-                      Start Pro for $19/month
-                      <ExternalLink className="w-4 h-4 ml-2" />
+                      Start Pro for ₹{PLANS.PRO.price}/month
+                      <QrCode className="w-4 h-4 ml-2" />
                     </GlowButton>
                   </div>
                 )}
@@ -235,6 +215,11 @@ const Subscription = () => {
         </main>
 
         <Footer />
+
+        <UpiPaymentModal
+          isOpen={payModalOpen}
+          onClose={() => setPayModalOpen(false)}
+        />
       </div>
     </>
   );
