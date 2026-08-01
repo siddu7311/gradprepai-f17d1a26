@@ -18,13 +18,10 @@ verify_jwt = false
 [functions.analyze-resume]
 verify_jwt = false
 
-[functions.create-checkout]
-verify_jwt = false
-
 [functions.check-subscription]
 verify_jwt = false
 
-[functions.customer-portal]
+[functions.submit-upi-payment]
 verify_jwt = false
 
 [functions.admin-users]
