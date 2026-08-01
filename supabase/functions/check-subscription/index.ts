@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -7,8 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const logStep = (step: string, details?: any) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+const logStep = (step: string, details?: unknown) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
   console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
 };
 
@@ -28,12 +27,10 @@ serve(async (req) => {
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header provided");
-    logStep("Authorization header found");
 
     const token = authHeader.replace("Bearer ", "");
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
 
-    // If a request comes in without a real user session (e.g. anon token), treat as not subscribed
     if (userError) {
       const msg = userError.message || "";
       logStep("Auth not available", { message: msg });
@@ -48,29 +45,25 @@ serve(async (req) => {
 
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User authenticated", { userId: user.id });
 
-    // Check if user is an admin (gets automatic Pro access)
+    // Admin emails get automatic Pro access
     const adminEmailsStr = Deno.env.get("ADMIN_EMAILS") || "";
-    const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase()).filter(e => e);
+    const adminEmails = adminEmailsStr.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
     const isAdmin = adminEmails.includes(user.email.toLowerCase());
-    
+
     if (isAdmin) {
-      logStep("User is admin, granting automatic Pro access", { email: user.email });
-      
-      // Also ensure they have admin role in database
       const { data: existingRole } = await supabaseClient
         .from("user_roles")
         .select("id")
         .eq("user_id", user.id)
         .eq("role", "admin")
-        .single();
-      
+        .maybeSingle();
+
       if (!existingRole) {
         await supabaseClient
           .from("user_roles")
           .upsert({ user_id: user.id, role: "admin" }, { onConflict: "user_id,role" });
-        logStep("Admin role added to database");
       }
 
       return new Response(JSON.stringify({
@@ -78,101 +71,60 @@ serve(async (req) => {
         product_id: "admin_pro",
         subscription_end: null,
         subscription_id: "admin",
-        is_admin: true
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+        is_admin: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
     }
 
-    // Check if user has moderator role in database (also gets Pro access)
+    // Role-based Pro access
     const { data: userRole } = await supabaseClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .in("role", ["admin", "moderator"])
-      .single();
+      .maybeSingle();
 
     if (userRole) {
-      logStep("User has special role, granting Pro access", { role: userRole.role });
       return new Response(JSON.stringify({
         subscribed: true,
         product_id: "role_pro",
         subscription_end: null,
         subscription_id: userRole.role,
-        is_admin: userRole.role === "admin"
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+        is_admin: userRole.role === "admin",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
     }
 
-    // Regular subscription check via Stripe
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
+    // UPI / QR payment based subscription
+    const { data: payment, error: paymentError } = await supabaseClient
+      .from("upi_payments")
+      .select("id, expires_at, plan, status")
+      .eq("user_id", user.id)
+      .eq("status", "approved")
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    
-    if (customers.data.length === 0) {
-      logStep("No customer found, returning unsubscribed state");
-      return new Response(JSON.stringify({ subscribed: false, is_admin: false }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+    if (paymentError) throw new Error(paymentError.message);
+
+    if (payment) {
+      logStep("Active UPI subscription found", { id: payment.id });
+      return new Response(JSON.stringify({
+        subscribed: true,
+        product_id: "upi_pro",
+        subscription_end: payment.expires_at,
+        subscription_id: payment.id,
+        is_admin: false,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
     }
 
-    const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
-
-    // Check for active or trialing subscriptions (test mode often uses trialing)
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      limit: 10,
-    });
-    
-    // Filter for active or trialing subscriptions
-    const validSubscription = subscriptions.data.find(
-      (sub: { status: string }) => sub.status === "active" || sub.status === "trialing"
-    );
-    
-    const hasActiveSub = !!validSubscription;
-    let productId = null;
-    let subscriptionEnd = null;
-    let subscriptionId = null;
-
-    if (hasActiveSub && validSubscription) {
-      subscriptionId = validSubscription.id;
-      // Safely handle the date conversion
-      try {
-        if (validSubscription.current_period_end) {
-          subscriptionEnd = new Date(validSubscription.current_period_end * 1000).toISOString();
-        }
-      } catch (e) {
-        logStep("Date conversion error, using null", { error: String(e) });
-      }
-      productId = validSubscription.items.data[0]?.price?.product as string || null;
-      logStep("Valid subscription found", { 
-        subscriptionId, 
-        status: validSubscription.status,
-        endDate: subscriptionEnd, 
-        productId 
-      });
-    } else {
-      logStep("No active/trialing subscription found");
-    }
-
+    logStep("No active subscription");
     return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
-      product_id: productId,
-      subscription_end: subscriptionEnd,
-      subscription_id: subscriptionId,
-      is_admin: false
-    }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+      subscribed: false,
+      product_id: null,
+      subscription_end: null,
+      subscription_id: null,
+      is_admin: false,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logStep("ERROR", { message: errorMessage });
