@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Crown, X, Check, Zap } from 'lucide-react';
 import { GlowButton } from './GlowButton';
-import { useSubscription } from '@/hooks/useSubscription';
+import { PLANS } from '@/hooks/useSubscription';
+import { UpiPaymentModal } from './UpiPaymentModal';
 
 interface UpgradeModalProps {
   isOpen: boolean;
@@ -19,20 +21,12 @@ const proFeatures = [
 ];
 
 export const UpgradeModal = ({ isOpen, onClose, feature }: UpgradeModalProps) => {
-  const { createCheckout } = useSubscription();
-
-  const handleUpgrade = async () => {
-    try {
-      await createCheckout();
-      onClose();
-    } catch (error) {
-      console.error('Checkout error:', error);
-    }
-  };
+  const [payOpen, setPayOpen] = useState(false);
 
   return (
+   <>
     <AnimatePresence>
-      {isOpen && (
+      {isOpen && !payOpen && (
         <>
           {/* Backdrop */}
           <motion.div
@@ -85,18 +79,18 @@ export const UpgradeModal = ({ isOpen, onClose, feature }: UpgradeModalProps) =>
 
                 {/* Price */}
                 <div className="text-center mb-6 py-4 border-y border-border/50">
-                  <span className="font-display text-4xl font-bold gradient-text">$19</span>
+                  <span className="font-display text-4xl font-bold gradient-text">₹{PLANS.PRO.price}</span>
                   <span className="text-muted-foreground">/month</span>
                 </div>
 
                 {/* CTA */}
-                <GlowButton onClick={handleUpgrade} className="w-full">
+                <GlowButton onClick={() => setPayOpen(true)} className="w-full">
                   <Zap className="w-4 h-4 mr-2" />
-                  Upgrade Now
+                  Pay with UPI / PhonePe QR
                 </GlowButton>
 
                 <p className="text-center text-xs text-muted-foreground mt-4">
-                  Cancel anytime. No questions asked.
+                  One-time ₹{PLANS.PRO.price} UPI payment · 30 days of Pro access.
                 </p>
               </div>
             </div>
@@ -104,5 +98,14 @@ export const UpgradeModal = ({ isOpen, onClose, feature }: UpgradeModalProps) =>
         </>
       )}
     </AnimatePresence>
+    <UpiPaymentModal
+      isOpen={payOpen}
+      feature={feature}
+      onClose={() => {
+        setPayOpen(false);
+        onClose();
+      }}
+    />
+   </>
   );
 };
