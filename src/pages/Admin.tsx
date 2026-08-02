@@ -273,6 +273,22 @@ const Admin = () => {
     return null;
   }
 
+  const now = Date.now();
+  const activePayments = payments.filter(
+    (p) => p.status === 'approved' && new Date(p.expires_at).getTime() > now
+  );
+  const totalRevenue = payments
+    .filter((p) => p.status === 'approved')
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthRevenue = payments
+    .filter((p) => p.status === 'approved' && new Date(p.created_at) >= monthStart)
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const emailFor = (userId: string, fallback: string | null) =>
+    adminUsers.find((u) => u.id === userId)?.email || fallback || 'Unknown';
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
