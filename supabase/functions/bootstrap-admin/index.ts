@@ -17,7 +17,7 @@ serve(async (req) => {
     { auth: { persistSession: false } }
   );
 
-  const email = (Deno.env.get("ADMIN_EMAILS") ?? "").split(",")[0].trim().toLowerCase();
+  const email = (Deno.env.get("ADMIN_BOOTSTRAP_EMAIL") ?? "").trim().toLowerCase();
   const password = Deno.env.get("ADMIN_BOOTSTRAP_PASSWORD") ?? "";
 
   if (!email || !password) {
