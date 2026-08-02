@@ -197,8 +197,8 @@ const About = () => {
                 <p className="text-muted-foreground mb-4">
                   We would love to hear from you. Whether you have feedback, questions, or partnership inquiries, reach out to us.
                 </p>
-                <a href="mailto:hello@gradprep.ai" className="text-primary hover:underline text-lg font-medium">
-                  hello@gradprep.ai
+                <a href="mailto:sudharshan1932007@gmail.com" className="text-primary hover:underline text-lg font-medium">
+                  sudharshan1932007@gmail.com
                 </a>
               </GlassCard>
             </motion.div>

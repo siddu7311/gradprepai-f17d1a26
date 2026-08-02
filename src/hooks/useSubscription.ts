@@ -101,7 +101,7 @@ export const useSubscription = () => {
    * Submits a UPI / PhonePe QR payment reference. On success the account is
    * upgraded to Pro immediately for 30 days.
    */
-  const submitUpiPayment = async (payload: { upi_reference: string; payer_phone?: string }) => {
+  const submitUpiPayment = async (payload?: { upi_reference?: string; payer_phone?: string }) => {
     if (!session?.access_token) {
       throw new Error('Not authenticated');
     }
@@ -111,9 +111,8 @@ export const useSubscription = () => {
         Authorization: `Bearer ${session.access_token}`,
       },
       body: {
-        upi_reference: payload.upi_reference,
-        payer_phone: payload.payer_phone ?? null,
-        amount: PLANS.PRO.price,
+        upi_reference: payload?.upi_reference ?? null,
+        payer_phone: payload?.payer_phone ?? null,
       },
     });
 

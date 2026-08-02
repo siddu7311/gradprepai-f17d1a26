@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft, Building2, Check, X, Clock } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft, Building2, Check, X, Clock, Wallet, IndianRupee, TrendingUp } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface UserRole {
@@ -37,6 +37,20 @@ interface EnterpriseRequest {
   created_at: string;
 }
 
+interface UpiPayment {
+  id: string;
+  user_id: string;
+  email: string | null;
+  amount: number;
+  plan: string;
+  upi_reference: string;
+  payer_phone: string | null;
+  status: string;
+  starts_at: string;
+  expires_at: string;
+  created_at: string;
+}
+
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: subLoading } = useSubscription();
@@ -47,6 +61,7 @@ const Admin = () => {
   const [enterpriseRequests, setEnterpriseRequests] = useState<EnterpriseRequest[]>([]);
   const [adminUsers, setAdminUsers] = useState<Array<{ id: string; email: string | null }>>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [payments, setPayments] = useState<UpiPayment[]>([]);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'moderator'>('admin');
   const [loading, setLoading] = useState(true);
@@ -103,6 +118,16 @@ const Admin = () => {
       if (requestsError) throw requestsError;
 
       setEnterpriseRequests(requestsData || []);
+
+      // Fetch subscription payments (wallet)
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('upi_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (paymentsError) throw paymentsError;
+
+      setPayments((paymentsData || []) as UpiPayment[]);
 
       // Merge roles with email from users list
       const rolesWithEmail = (rolesData || []).map((role) => {
@@ -248,6 +273,22 @@ const Admin = () => {
     return null;
   }
 
+  const now = Date.now();
+  const activePayments = payments.filter(
+    (p) => p.status === 'approved' && new Date(p.expires_at).getTime() > now
+  );
+  const totalRevenue = payments
+    .filter((p) => p.status === 'approved')
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthRevenue = payments
+    .filter((p) => p.status === 'approved' && new Date(p.created_at) >= monthStart)
+    .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const emailFor = (userId: string, fallback: string | null) =>
+    adminUsers.find((u) => u.id === userId)?.email || fallback || 'Unknown';
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -317,6 +358,83 @@ const Admin = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Wallet */}
+        <Card className="mb-8 border-primary/30 animate-fade-in-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-primary" />
+              Wallet & Subscriptions
+            </CardTitle>
+            <CardDescription>Revenue collected from Pro subscriptions (UPI / PhonePe)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Total earnings</p>
+                <p className="text-2xl font-bold flex items-center">
+                  <IndianRupee className="w-5 h-5" />{totalRevenue.toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">This month</p>
+                <p className="text-2xl font-bold flex items-center">
+                  <IndianRupee className="w-5 h-5" />{monthRevenue.toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Active Pro subscribers</p>
+                <p className="text-2xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />{activePayments.length}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Total payments</p>
+                <p className="text-2xl font-bold">{payments.length}</p>
+              </div>
+            </div>
+
+            {payments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No subscription payments yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Paid on</TableHead>
+                      <TableHead>Valid till</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.slice(0, 25).map((p) => {
+                      const active = new Date(p.expires_at).getTime() > now && p.status === 'approved';
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{emailFor(p.user_id, p.email)}</TableCell>
+                          <TableCell>₹{Number(p.amount).toLocaleString('en-IN')}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{p.upi_reference}</TableCell>
+                          <TableCell>{p.payer_phone ? `+91 ${p.payer_phone}` : '—'}</TableCell>
+                          <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(p.expires_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={active ? 'default' : 'secondary'}>
+                              {active ? 'Active' : 'Expired'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Enterprise Requests */}
         {enterpriseRequests.filter(r => r.status === 'pending').length > 0 && (

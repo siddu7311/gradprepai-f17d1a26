@@ -17,7 +17,7 @@ interface UpiPaymentModalProps {
 const buildReceipt = (params: {
   email?: string | null;
   reference: string;
-  phone: string;
+  phone?: string;
   paymentId?: string;
   expiresAt?: string;
 }) => {
@@ -27,8 +27,8 @@ const buildReceipt = (params: {
     `Plan: Pro (Monthly)`,
     `Amount: ₹${PLANS.PRO.price}`,
     `Paid via: PhonePe / UPI QR`,
-    `UPI Ref / UTR: ${params.reference}`,
-    `Payer WhatsApp: +91${params.phone}`,
+    `Reference: ${params.reference}`,
+    params.phone ? `Payer WhatsApp: +91${params.phone}` : '',
     params.email ? `Account: ${params.email}` : '',
     params.paymentId ? `Receipt ID: ${params.paymentId}` : '',
     params.expiresAt ? `Valid till: ${new Date(params.expiresAt).toLocaleDateString()}` : '',
@@ -42,7 +42,6 @@ const buildReceipt = (params: {
 export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalProps) => {
   const { submitUpiPayment } = useSubscription();
   const { toast } = useToast();
-  const [reference, setReference] = useState('');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<{ receipt: string } | null>(null);
@@ -54,22 +53,14 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
 
   const handleSubmit = async () => {
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    if (reference.trim().length < 6) {
-      toast({ title: 'Invalid reference', description: 'Enter the UPI transaction / UTR number from PhonePe.', variant: 'destructive' });
-      return;
-    }
-    if (cleanPhone.length !== 10) {
-      toast({ title: 'Invalid WhatsApp number', description: 'Enter your 10-digit WhatsApp number.', variant: 'destructive' });
-      return;
-    }
 
     try {
       setSubmitting(true);
-      const result = await submitUpiPayment({ upi_reference: reference.trim(), payer_phone: cleanPhone });
+      const result = await submitUpiPayment(cleanPhone.length === 10 ? { payer_phone: cleanPhone } : undefined);
       const receipt = buildReceipt({
         email: result?.email,
-        reference: reference.trim(),
-        phone: cleanPhone,
+        reference: result?.upi_reference ?? '—',
+        phone: cleanPhone.length === 10 ? cleanPhone : undefined,
         paymentId: result?.payment_id,
         expiresAt: result?.expires_at,
       });
@@ -88,7 +79,6 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
   };
 
   const handleClose = () => {
-    setReference('');
     setPhone('');
     setDone(null);
     onClose();
@@ -156,33 +146,28 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-2xl bg-white p-3">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+                      className="mx-auto w-[190px] rounded-2xl bg-white p-2 shadow-glow"
+                    >
                       <img
                         src={qrAsset.url}
                         alt="PhonePe UPI QR code to pay ₹199 for GradPrep AI Pro"
-                        className="w-full rounded-xl"
+                        className="w-full aspect-square object-cover object-center rounded-xl"
                         loading="lazy"
                       />
-                    </div>
+                    </motion.div>
 
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                       <li>Scan the QR with PhonePe, GPay, Paytm or any UPI app.</li>
                       <li>Pay ₹{PLANS.PRO.price} to DARA SUDHARSHAN.</li>
-                      <li>Enter the transaction / UTR number below to activate Pro.</li>
+                      <li>Tap the button below — Pro activates instantly.</li>
                     </ol>
 
                     <div className="space-y-2">
-                      <Label htmlFor="upi-ref">UPI transaction / UTR number</Label>
-                      <Input
-                        id="upi-ref"
-                        placeholder="e.g. 412345678912"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="wa-phone">Your WhatsApp number</Label>
+                      <Label htmlFor="wa-phone">WhatsApp number (optional)</Label>
                       <Input
                         id="wa-phone"
                         inputMode="numeric"
@@ -195,9 +180,9 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                       </p>
                     </div>
 
-                    <GlowButton className="w-full" onClick={handleSubmit} disabled={submitting}>
+                    <GlowButton className="w-full animate-glow-pulse" onClick={handleSubmit} disabled={submitting}>
                       {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                      I've paid — Activate Pro
+                      {submitting ? 'Activating Pro…' : "Payment done — Activate Pro"}
                     </GlowButton>
                   </div>
                 )}
