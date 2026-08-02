@@ -27,7 +27,7 @@ const socialLinks = [
   { icon: Twitter, href: '#', label: 'Twitter' },
   { icon: Github, href: '#', label: 'GitHub' },
   { icon: Linkedin, href: '#', label: 'LinkedIn' },
-  { icon: Mail, href: 'mailto:hello@gradprep.ai', label: 'Email' },
+  { icon: Mail, href: 'mailto:sudharshan1932007@gmail.com', label: 'Email' },
 ];
 
 export const Footer = () => {
