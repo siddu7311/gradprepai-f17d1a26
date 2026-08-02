@@ -17,7 +17,7 @@ interface UpiPaymentModalProps {
 const buildReceipt = (params: {
   email?: string | null;
   reference: string;
-  phone: string;
+  phone?: string;
   paymentId?: string;
   expiresAt?: string;
 }) => {
@@ -27,8 +27,8 @@ const buildReceipt = (params: {
     `Plan: Pro (Monthly)`,
     `Amount: ₹${PLANS.PRO.price}`,
     `Paid via: PhonePe / UPI QR`,
-    `UPI Ref / UTR: ${params.reference}`,
-    `Payer WhatsApp: +91${params.phone}`,
+    `Reference: ${params.reference}`,
+    params.phone ? `Payer WhatsApp: +91${params.phone}` : '',
     params.email ? `Account: ${params.email}` : '',
     params.paymentId ? `Receipt ID: ${params.paymentId}` : '',
     params.expiresAt ? `Valid till: ${new Date(params.expiresAt).toLocaleDateString()}` : '',
@@ -42,7 +42,6 @@ const buildReceipt = (params: {
 export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalProps) => {
   const { submitUpiPayment } = useSubscription();
   const { toast } = useToast();
-  const [reference, setReference] = useState('');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState<{ receipt: string } | null>(null);
@@ -54,22 +53,14 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
 
   const handleSubmit = async () => {
     const cleanPhone = phone.replace(/\D/g, '').slice(-10);
-    if (reference.trim().length < 6) {
-      toast({ title: 'Invalid reference', description: 'Enter the UPI transaction / UTR number from PhonePe.', variant: 'destructive' });
-      return;
-    }
-    if (cleanPhone.length !== 10) {
-      toast({ title: 'Invalid WhatsApp number', description: 'Enter your 10-digit WhatsApp number.', variant: 'destructive' });
-      return;
-    }
 
     try {
       setSubmitting(true);
-      const result = await submitUpiPayment({ upi_reference: reference.trim(), payer_phone: cleanPhone });
+      const result = await submitUpiPayment(cleanPhone.length === 10 ? { payer_phone: cleanPhone } : undefined);
       const receipt = buildReceipt({
         email: result?.email,
-        reference: reference.trim(),
-        phone: cleanPhone,
+        reference: result?.upi_reference ?? '—',
+        phone: cleanPhone.length === 10 ? cleanPhone : undefined,
         paymentId: result?.payment_id,
         expiresAt: result?.expires_at,
       });
@@ -88,7 +79,6 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
   };
 
   const handleClose = () => {
-    setReference('');
     setPhone('');
     setDone(null);
     onClose();
