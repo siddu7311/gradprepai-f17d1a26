@@ -180,7 +180,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                       </p>
                     </div>
 
-                    <GlowButton className="w-full animate-pulse-glow" onClick={handleSubmit} disabled={submitting}>
+                    <GlowButton className="w-full animate-glow-pulse" onClick={handleSubmit} disabled={submitting}>
                       {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
                       {submitting ? 'Activating Pro…' : "Payment done — Activate Pro"}
                     </GlowButton>
