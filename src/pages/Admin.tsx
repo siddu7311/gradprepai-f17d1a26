@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft, Building2, Check, X, Clock } from 'lucide-react';
+import { Shield, UserPlus, Trash2, Crown, Users, ArrowLeft, Building2, Check, X, Clock, Wallet, IndianRupee, TrendingUp } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface UserRole {
@@ -37,6 +37,20 @@ interface EnterpriseRequest {
   created_at: string;
 }
 
+interface UpiPayment {
+  id: string;
+  user_id: string;
+  email: string | null;
+  amount: number;
+  plan: string;
+  upi_reference: string;
+  payer_phone: string | null;
+  status: string;
+  starts_at: string;
+  expires_at: string;
+  created_at: string;
+}
+
 const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: subLoading } = useSubscription();
@@ -47,6 +61,7 @@ const Admin = () => {
   const [enterpriseRequests, setEnterpriseRequests] = useState<EnterpriseRequest[]>([]);
   const [adminUsers, setAdminUsers] = useState<Array<{ id: string; email: string | null }>>([]);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [payments, setPayments] = useState<UpiPayment[]>([]);
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<'admin' | 'moderator'>('admin');
   const [loading, setLoading] = useState(true);
@@ -103,6 +118,16 @@ const Admin = () => {
       if (requestsError) throw requestsError;
 
       setEnterpriseRequests(requestsData || []);
+
+      // Fetch subscription payments (wallet)
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('upi_payments')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (paymentsError) throw paymentsError;
+
+      setPayments((paymentsData || []) as UpiPayment[]);
 
       // Merge roles with email from users list
       const rolesWithEmail = (rolesData || []).map((role) => {
