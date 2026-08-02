@@ -146,33 +146,28 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="rounded-2xl bg-white p-3">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+                      className="mx-auto w-[190px] rounded-2xl bg-white p-2 shadow-glow"
+                    >
                       <img
                         src={qrAsset.url}
                         alt="PhonePe UPI QR code to pay ₹199 for GradPrep AI Pro"
-                        className="w-full rounded-xl"
+                        className="w-full aspect-square object-cover object-center rounded-xl"
                         loading="lazy"
                       />
-                    </div>
+                    </motion.div>
 
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                       <li>Scan the QR with PhonePe, GPay, Paytm or any UPI app.</li>
                       <li>Pay ₹{PLANS.PRO.price} to DARA SUDHARSHAN.</li>
-                      <li>Enter the transaction / UTR number below to activate Pro.</li>
+                      <li>Tap the button below — Pro activates instantly.</li>
                     </ol>
 
                     <div className="space-y-2">
-                      <Label htmlFor="upi-ref">UPI transaction / UTR number</Label>
-                      <Input
-                        id="upi-ref"
-                        placeholder="e.g. 412345678912"
-                        value={reference}
-                        onChange={(e) => setReference(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="wa-phone">Your WhatsApp number</Label>
+                      <Label htmlFor="wa-phone">WhatsApp number (optional)</Label>
                       <Input
                         id="wa-phone"
                         inputMode="numeric"
@@ -185,9 +180,9 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                       </p>
                     </div>
 
-                    <GlowButton className="w-full" onClick={handleSubmit} disabled={submitting}>
+                    <GlowButton className="w-full animate-pulse-glow" onClick={handleSubmit} disabled={submitting}>
                       {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                      I've paid — Activate Pro
+                      {submitting ? 'Activating Pro…' : "Payment done — Activate Pro"}
                     </GlowButton>
                   </div>
                 )}
