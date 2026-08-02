@@ -359,6 +359,83 @@ const Admin = () => {
           </Card>
         </div>
 
+        {/* Wallet */}
+        <Card className="mb-8 border-primary/30 animate-fade-in-up">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-primary" />
+              Wallet & Subscriptions
+            </CardTitle>
+            <CardDescription>Revenue collected from Pro subscriptions (UPI / PhonePe)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Total earnings</p>
+                <p className="text-2xl font-bold flex items-center">
+                  <IndianRupee className="w-5 h-5" />{totalRevenue.toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">This month</p>
+                <p className="text-2xl font-bold flex items-center">
+                  <IndianRupee className="w-5 h-5" />{monthRevenue.toLocaleString('en-IN')}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Active Pro subscribers</p>
+                <p className="text-2xl font-bold flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />{activePayments.length}
+                </p>
+              </div>
+              <div className="rounded-xl border border-glass-border/30 p-4 transition-transform hover:-translate-y-1">
+                <p className="text-xs text-muted-foreground mb-1">Total payments</p>
+                <p className="text-2xl font-bold">{payments.length}</p>
+              </div>
+            </div>
+
+            {payments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No subscription payments yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Paid on</TableHead>
+                      <TableHead>Valid till</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.slice(0, 25).map((p) => {
+                      const active = new Date(p.expires_at).getTime() > now && p.status === 'approved';
+                      return (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{emailFor(p.user_id, p.email)}</TableCell>
+                          <TableCell>₹{Number(p.amount).toLocaleString('en-IN')}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{p.upi_reference}</TableCell>
+                          <TableCell>{p.payer_phone ? `+91 ${p.payer_phone}` : '—'}</TableCell>
+                          <TableCell>{new Date(p.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>{new Date(p.expires_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Badge variant={active ? 'default' : 'secondary'}>
+                              {active ? 'Active' : 'Expired'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Enterprise Requests */}
         {enterpriseRequests.filter(r => r.status === 'pending').length > 0 && (
           <Card className="mb-8 border-orange-500/30">
