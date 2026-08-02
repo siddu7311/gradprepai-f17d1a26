@@ -31,12 +31,40 @@ serve(async (req) => {
     if (userError || !user) return json({ error: "Not authenticated" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const upiReference = String(body.upi_reference ?? "").trim();
-    const payerPhone = body.payer_phone ? String(body.payer_phone).trim() : null;
-    const amount = Number(body.amount ?? 199);
+    const payerPhone = body.payer_phone ? String(body.payer_phone).replace(/\D/g, "").slice(-10) : null;
 
-    if (upiReference.length < 6) {
-      return json({ error: "Please enter a valid UPI transaction / UTR reference number." }, 400);
+    // Amount and plan are fixed server-side — never trusted from the client.
+    const amount = 199;
+
+    // Reference is generated server-side so users don't have to type a UTR.
+    const clientRef = String(body.upi_reference ?? "").trim();
+    const upiReference =
+      clientRef.length >= 6
+        ? clientRef
+        : `UPI-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+
+    // Re-use an already active subscription instead of stacking duplicates.
+    const { data: active } = await supabase
+      .from("upi_payments")
+      .select("id, starts_at, expires_at, upi_reference")
+      .eq("user_id", user.id)
+      .eq("status", "approved")
+      .gt("expires_at", new Date().toISOString())
+      .order("expires_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (active) {
+      return json({
+        success: true,
+        already_active: true,
+        payment_id: active.id,
+        email: user.email,
+        amount,
+        upi_reference: active.upi_reference,
+        starts_at: active.starts_at,
+        expires_at: active.expires_at,
+      });
     }
 
     const startsAt = new Date();
