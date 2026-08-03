@@ -1,10 +1,10 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useSpeechRecognition } from './useSpeechRecognition';
-import { useAIVoice } from './useAIVoice';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
+import { useVoiceConversation, ConversationStatus } from './useVoiceConversation';
+
 export interface InterviewQuestion {
   question: string;
   followUp?: string;
@@ -32,360 +32,54 @@ interface ResponseAnalysis {
   strengths: string[];
   improvements: string[];
   topicsCovered: string[];
-  followUpQuestion?: string;
   communicationScore?: number;
   problemSolvingScore?: number;
   confidenceScore?: number;
   technicalScore?: number;
 }
 
-interface UseVoiceInterviewResult {
-  isLoading: boolean;
-  isAISpeaking: boolean;
-  isUserSpeaking: boolean;
-  currentQuestion: number;
-  questions: InterviewQuestion[];
-  transcript: TranscriptEntry[];
-  currentUserTranscript: string;
-  interimTranscript: string;
-  analyses: ResponseAnalysis[];
-  startInterview: (config: InterviewConfig) => Promise<void>;
-  startListening: () => void;
-  stopListening: () => void;
-  submitAnswer: () => Promise<void>;
-  nextQuestion: () => void;
-  endInterview: () => Promise<void>;
-  isInterviewActive: boolean;
-  config: InterviewConfig | null;
-  error: string | null;
-}
+const INTRO = {
+  amds: (role: string) =>
+    `Hey there, I am Siddu, your interviewer. Let's start our interview for the ${role} role. Feel free to answer in any language you are comfortable with. Here is my first question.`,
+  lusy: (role: string) =>
+    `Hey there, I am Lusy, your interviewer. Let's start our interview for the ${role} role. Answer in whichever language feels comfortable for you. Here is my first question.`,
+};
 
-export function useVoiceInterview(): UseVoiceInterviewResult {
+export function useVoiceInterview() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
   const [isLoading, setIsLoading] = useState(false);
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
-  const [currentUserTranscript, setCurrentUserTranscript] = useState('');
   const [analyses, setAnalyses] = useState<ResponseAnalysis[]>([]);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
+  const [isFinished, setIsFinished] = useState(false);
   const [config, setConfig] = useState<InterviewConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
-  const pendingAnalysisRef = useRef(false);
+
+  const questionsRef = useRef<InterviewQuestion[]>([]);
+  const indexRef = useRef(0);
+  const configRef = useRef<InterviewConfig | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<Date | null>(null);
-  const userAnswersRef = useRef<Map<number, string>>(new Map());
-  const autoStartMicRef = useRef(false);
-  const { speak, isSpeaking: isAISpeaking, cancel: cancelSpeech } = useAIVoice();
-  
-  const handleSpeechResult = useCallback((result: string) => {
-    setCurrentUserTranscript(prev => prev + ' ' + result);
-  }, []);
-
-  const {
-    isListening: isUserSpeaking,
-    interimTranscript,
-    startListening: startRecognition,
-    stopListening: stopRecognition,
-    resetTranscript,
-    isSupported: isSpeechSupported
-  } = useSpeechRecognition({
-    onResult: handleSpeechResult,
-    continuous: true,
-    interimResults: true
-  });
-
-  // Track previous speaking state to detect transition
-  const wasAISpeakingRef = useRef(false);
-  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Auto-start microphone when AI finishes speaking
-  useEffect(() => {
-    const wasAISpeaking = wasAISpeakingRef.current;
-    wasAISpeakingRef.current = isAISpeaking;
-
-    // Clear any pending auto-start timer
-    if (autoStartTimerRef.current) {
-      clearTimeout(autoStartTimerRef.current);
-      autoStartTimerRef.current = null;
-    }
-
-    // Only auto-start when AI just finished speaking (transition from speaking to not speaking)
-    if (wasAISpeaking && !isAISpeaking && isInterviewActive && autoStartMicRef.current && isSpeechSupported && !isLoading) {
-      // Delay to ensure TTS audio has fully stopped and won't be picked up
-      autoStartTimerRef.current = setTimeout(() => {
-        if (!isAISpeaking && isInterviewActive && autoStartMicRef.current && !isUserSpeaking) {
-          console.log('Auto-starting microphone after AI speech ended');
-          resetTranscript();
-          setCurrentUserTranscript('');
-          startRecognition();
-        }
-      }, 1000); // Increased delay for better reliability
-    }
-
-    return () => {
-      if (autoStartTimerRef.current) {
-        clearTimeout(autoStartTimerRef.current);
-        autoStartTimerRef.current = null;
-      }
-    };
-  }, [isAISpeaking, isInterviewActive, isSpeechSupported, isLoading, isUserSpeaking, startRecognition, resetTranscript]);
-
-  const speakText = useCallback((text: string, personaOverride?: 'amds' | 'lusy') => {
-    // Prevent the browser STT from accidentally transcribing the AI's TTS audio
-    stopRecognition();
-
-    const persona = personaOverride ?? config?.interviewer ?? 'lusy';
-    void speak(text, { persona, speed: persona === 'amds' ? 1 : 0.97 });
-  }, [config?.interviewer, speak, stopRecognition]);
+  const analysesRef = useRef<ResponseAnalysis[]>([]);
 
   const addToTranscript = useCallback((role: 'ai' | 'user', text: string) => {
-    setTranscript(prev => [...prev, { role, text, timestamp: new Date() }]);
+    setTranscript((prev) => [...prev, { role, text, timestamp: new Date() }]);
   }, []);
 
-  const startInterview = useCallback(async (interviewConfig: InterviewConfig) => {
-    setIsLoading(true);
-    setError(null);
-    setConfig(interviewConfig);
-    startTimeRef.current = new Date();
-    userAnswersRef.current = new Map();
-
-    const questionCount = interviewConfig.questionCount || 5;
-    autoStartMicRef.current = true;
-
-    // Remember recently asked questions so the AI generates fresh ones every session.
-    const askedKey = `gp_asked_${interviewConfig.role}_${interviewConfig.language}_${interviewConfig.difficulty}`;
-    let previousQuestions: string[] = [];
-    try {
-      previousQuestions = JSON.parse(localStorage.getItem(askedKey) || '[]');
-      if (!Array.isArray(previousQuestions)) previousQuestions = [];
-    } catch {
-      previousQuestions = [];
-    }
-
-    try {
-      // Create interview session in database
-      if (user?.id) {
-        const { data: sessionData, error: sessionError } = await supabase
-          .from('interview_sessions')
-          .insert({
-            user_id: user.id,
-            role_type: interviewConfig.role,
-            difficulty: interviewConfig.difficulty,
-            status: 'in_progress',
-            total_questions: questionCount,
-            completed_questions: 0
-          })
-          .select()
-          .single();
-
-        if (sessionError) {
-          console.error('Failed to create session:', sessionError);
-        } else {
-          sessionIdRef.current = sessionData.id;
-        }
-      }
-
-      const { data, error: fnError } = await supabase.functions.invoke('generate-interview-questions', {
-        body: {
-          role: interviewConfig.role,
-          language: interviewConfig.language,
-          difficulty: interviewConfig.difficulty,
-          persona: interviewConfig.interviewer,
-          questionCount,
-          previousQuestions: previousQuestions.slice(-40),
-          seed: `${Date.now()}-${Math.random().toString(36).slice(2)}`
-        }
-      });
-
-      if (fnError) throw fnError;
-      if (data.error) throw new Error(data.error);
-
-      setQuestions(data.questions);
-
-      try {
-        const merged = [
-          ...previousQuestions,
-          ...(data.questions || []).map((q: InterviewQuestion) => q.question),
-        ].slice(-60);
-        localStorage.setItem(askedKey, JSON.stringify(merged));
-      } catch {
-        // localStorage unavailable — variety still handled by the seed
-      }
-
-      setIsInterviewActive(true);
-      setCurrentQuestion(0);
-      setTranscript([]);
-      setAnalyses([]);
-
-      // Greet and ask first question
-      const greeting = interviewConfig.interviewer === 'amds'
-        ? `Hello, I'm AMDS, and I'll be conducting your ${interviewConfig.role} interview today. Let's begin.`
-        : `Hi there! I'm LUSY, and I'm so excited to chat with you about the ${interviewConfig.role} position today. Let's get started!`;
-
-      const firstQuestion = data.questions[0].question;
-      const fullGreeting = `${greeting} ${firstQuestion}`;
-      
-      addToTranscript('ai', fullGreeting);
-      // IMPORTANT: speak immediately using the config we just received (state updates are async)
-      speakText(fullGreeting, interviewConfig.interviewer);
-
-    } catch (err) {
-      console.error('Failed to start interview:', err);
-      setError(err instanceof Error ? err.message : 'Failed to start interview');
-      toast.error('Failed to start interview. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user?.id, addToTranscript, speakText]);
-
-  const startListening = useCallback(() => {
-    if (!isSpeechSupported) {
-      toast.error('Speech recognition is not supported in your browser');
-      return;
-    }
-    resetTranscript();
-    setCurrentUserTranscript('');
-    startRecognition();
-  }, [isSpeechSupported, resetTranscript, startRecognition]);
-
-  const stopListening = useCallback(() => {
-    stopRecognition();
-  }, [stopRecognition]);
-
-  const submitAnswer = useCallback(async () => {
-    const userAnswer = currentUserTranscript.trim();
-    
-    // Validate: don't submit empty answers
-    if (!config || !userAnswer || pendingAnalysisRef.current) {
-      if (!userAnswer) {
-        toast.error('Please speak your answer first. Click the microphone and say your response.');
-      }
-      return;
-    }
-
-    // Check minimum word count to ensure actual answer
-    const wordCount = userAnswer.split(/\s+/).filter(w => w.length > 0).length;
-    if (wordCount < 3) {
-      toast.error('Please provide a more complete answer. Your response should contain at least a few words.');
-      return;
-    }
-
-    pendingAnalysisRef.current = true;
-    stopRecognition();
-    addToTranscript('user', userAnswer);
-    
-    // Store user answer for later saving
-    userAnswersRef.current.set(currentQuestion, userAnswer);
-
-    try {
-      const currentQ = questions[currentQuestion];
-      
-      console.log('Analyzing answer:', userAnswer.substring(0, 100) + '...');
-      
-      const { data, error: fnError } = await supabase.functions.invoke('analyze-interview-response', {
-        body: {
-          question: currentQ.question,
-          answer: userAnswer,
-          persona: config.interviewer,
-          role: config.role,
-          expectedTopics: currentQ.expectedTopics
-        }
-      });
-
-      if (fnError) throw fnError;
-      if (data.error) throw new Error(data.error);
-
-      console.log('Analysis result:', data);
-      setAnalyses(prev => [...prev, data]);
-
-      // Save result to database with more accurate scoring
-      if (user?.id && sessionIdRef.current) {
-        const clamp = (value: unknown, fallback: number) =>
-          typeof value === 'number' && Number.isFinite(value)
-            ? Math.min(100, Math.max(0, Math.round(value * 10)))
-            : fallback;
-
-        const scorePercent = clamp(data.score, 0);
-
-        await supabase.from('interview_results').insert({
-          user_id: user.id,
-          session_id: sessionIdRef.current,
-          question_number: currentQuestion + 1,
-          question_text: currentQ.question,
-          user_answer: userAnswer,
-          score: scorePercent,
-          feedback: data.feedback,
-          strengths: data.strengths || [],
-          weaknesses: data.improvements || [],
-          // Real per-dimension scores from the analyzer — never randomised.
-          technical_score: clamp(data.technicalScore, scorePercent),
-          communication_score: clamp(data.communicationScore, scorePercent),
-          problem_solving_score: clamp(data.problemSolvingScore, scorePercent),
-          confidence_score: clamp(data.confidenceScore, scorePercent)
-        });
-
-        // Update session completed questions count
-        await supabase
-          .from('interview_sessions')
-          .update({ completed_questions: currentQuestion + 1 })
-          .eq('id', sessionIdRef.current);
-
-        // Invalidate queries to refresh dashboard data
-        queryClient.invalidateQueries({ queryKey: ['interview_sessions'] });
-        queryClient.invalidateQueries({ queryKey: ['interview_results'] });
-        queryClient.invalidateQueries({ queryKey: ['all_interview_results'] });
-      }
-
-      // Provide feedback
-      const feedback = data.feedback || "Thank you for your answer.";
-      addToTranscript('ai', feedback);
-      speakText(feedback);
-
-    } catch (err) {
-      console.error('Failed to analyze response:', err);
-      toast.error('Failed to analyze response. Please try again.');
-    } finally {
-      setCurrentUserTranscript('');
-      pendingAnalysisRef.current = false;
-    }
-  }, [config, currentUserTranscript, questions, currentQuestion, user?.id, queryClient, stopRecognition, addToTranscript, speakText]);
-
-  const nextQuestion = useCallback(() => {
-    if (currentQuestion < questions.length - 1) {
-      const nextQ = currentQuestion + 1;
-      setCurrentQuestion(nextQ);
-      setCurrentUserTranscript('');
-      
-      const questionText = questions[nextQ].question;
-      const transition = config?.interviewer === 'amds'
-        ? `Next question. ${questionText}`
-        : `Great! Let's move on. ${questionText}`;
-      
-      addToTranscript('ai', transition);
-      speakText(transition);
-    }
-  }, [currentQuestion, questions, config, addToTranscript, speakText]);
-
-  const endInterview = useCallback(async () => {
-    autoStartMicRef.current = false;
-    cancelSpeech();
-    stopRecognition();
-    setIsInterviewActive(false);
-    
-    // Calculate duration and average score
+  const completeSession = useCallback(async () => {
     const endTime = new Date();
-    const durationMinutes = startTimeRef.current 
+    const durationMinutes = startTimeRef.current
       ? Math.max(1, Math.round((endTime.getTime() - startTimeRef.current.getTime()) / 60000))
       : 1;
-    
-    const avgScore = analyses.length > 0
-      ? Math.round((analyses.reduce((sum, a) => sum + a.score, 0) / analyses.length) * 10)
+    const list = analysesRef.current;
+    const avgScore = list.length
+      ? Math.round((list.reduce((sum, a) => sum + (a.score || 0), 0) / list.length) * 10)
       : 0;
 
-    // Update session as completed in database
     if (user?.id && sessionIdRef.current) {
       try {
         await supabase
@@ -395,56 +89,216 @@ export function useVoiceInterview(): UseVoiceInterviewResult {
             completed_at: endTime.toISOString(),
             duration_minutes: durationMinutes,
             overall_score: avgScore,
-            completed_questions: analyses.length
+            completed_questions: list.length,
           })
           .eq('id', sessionIdRef.current);
-
-        // Invalidate queries to refresh dashboard data
         queryClient.invalidateQueries({ queryKey: ['interview_sessions'] });
         queryClient.invalidateQueries({ queryKey: ['interview_results'] });
         queryClient.invalidateQueries({ queryKey: ['all_interview_results'] });
       } catch (err) {
-        console.error('Failed to update session:', err);
+        console.error('Failed to complete session:', err);
       }
     }
+  }, [user?.id, queryClient]);
 
-    const closing = config?.interviewer === 'amds'
-      ? "The interview is complete. Thank you for your time."
-      : "That's a wrap! Thank you so much for chatting with me today. You did great!";
-    
-    addToTranscript('ai', closing);
-    speakText(closing);
-  }, [config, user?.id, analyses, queryClient, cancelSpeech, stopRecognition, addToTranscript, speakText]);
+  /** Analyse the spoken answer, then continue the conversation with the next question. */
+  const getReply = useCallback(
+    async (answer: string): Promise<string> => {
+      const cfg = configRef.current;
+      const idx = indexRef.current;
+      const currentQ = questionsRef.current[idx];
+      if (!cfg || !currentQ) return 'Thanks for that.';
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (autoStartTimerRef.current) {
-        clearTimeout(autoStartTimerRef.current);
+      let feedback = 'Thank you for that answer.';
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke('analyze-interview-response', {
+          body: {
+            question: currentQ.question,
+            answer,
+            persona: cfg.interviewer,
+            role: cfg.role,
+            expectedTopics: currentQ.expectedTopics,
+          },
+        });
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
+
+        setAnalyses((prev) => {
+          const next = [...prev, data];
+          analysesRef.current = next;
+          return next;
+        });
+        feedback = (data.feedback || feedback).toString();
+
+        if (user?.id && sessionIdRef.current) {
+          const clamp = (value: unknown, fallback: number) =>
+            typeof value === 'number' && Number.isFinite(value)
+              ? Math.min(100, Math.max(0, Math.round(value * 10)))
+              : fallback;
+          const scorePercent = clamp(data.score, 0);
+          await supabase.from('interview_results').insert({
+            user_id: user.id,
+            session_id: sessionIdRef.current,
+            question_number: idx + 1,
+            question_text: currentQ.question,
+            user_answer: answer,
+            score: scorePercent,
+            feedback: data.feedback,
+            strengths: data.strengths || [],
+            weaknesses: data.improvements || [],
+            technical_score: clamp(data.technicalScore, scorePercent),
+            communication_score: clamp(data.communicationScore, scorePercent),
+            problem_solving_score: clamp(data.problemSolvingScore, scorePercent),
+            confidence_score: clamp(data.confidenceScore, scorePercent),
+          });
+          await supabase
+            .from('interview_sessions')
+            .update({ completed_questions: idx + 1 })
+            .eq('id', sessionIdRef.current);
+          queryClient.invalidateQueries({ queryKey: ['interview_sessions'] });
+          queryClient.invalidateQueries({ queryKey: ['interview_results'] });
+          queryClient.invalidateQueries({ queryKey: ['all_interview_results'] });
+        }
+      } catch (err) {
+        console.error('Failed to analyse response:', err);
       }
-      cancelSpeech();
-      stopRecognition();
-    };
-  }, [cancelSpeech, stopRecognition]);
+
+      const hasNext = idx + 1 < questionsRef.current.length;
+      if (hasNext) {
+        indexRef.current = idx + 1;
+        setCurrentQuestion(idx + 1);
+        const nextQ = questionsRef.current[idx + 1].question;
+        const bridge = cfg.interviewer === 'amds' ? 'Next question.' : "Alright, let's keep going.";
+        return `${feedback} ${bridge} ${nextQ}`;
+      }
+
+      setIsFinished(true);
+      void completeSession();
+      const closing =
+        cfg.interviewer === 'amds'
+          ? 'That completes our interview. Thank you for your time — let me pull up your results.'
+          : "And that's a wrap! Thank you so much for talking with me today. Let me pull up your results.";
+      return `${feedback} ${closing}`;
+    },
+    [user?.id, queryClient, completeSession],
+  );
+
+  const conversation = useVoiceConversation({
+    persona: config?.interviewer === 'amds' ? 'siddu' : 'lusy',
+    getReply,
+    silenceMs: 2000,
+    onUserSpeech: (text) => addToTranscript('user', text),
+    onAssistantSpeech: (text) => addToTranscript('ai', text),
+    pausedPhrase: "Sure, no problem — take your time. Just say continue when you're ready.",
+    resumedPhrase: "Great, let's continue.",
+  });
+
+  const startInterview = useCallback(
+    async (interviewConfig: InterviewConfig) => {
+      setIsLoading(true);
+      setError(null);
+      setConfig(interviewConfig);
+      configRef.current = interviewConfig;
+      startTimeRef.current = new Date();
+      indexRef.current = 0;
+      analysesRef.current = [];
+      setAnalyses([]);
+      setTranscript([]);
+      setIsFinished(false);
+
+      const questionCount = interviewConfig.questionCount || 5;
+      const askedKey = `gp_asked_${interviewConfig.role}_${interviewConfig.language}_${interviewConfig.difficulty}`;
+      let previousQuestions: string[] = [];
+      try {
+        const stored = JSON.parse(localStorage.getItem(askedKey) || '[]');
+        previousQuestions = Array.isArray(stored) ? stored : [];
+      } catch {
+        previousQuestions = [];
+      }
+
+      try {
+        if (user?.id) {
+          const { data: sessionData, error: sessionError } = await supabase
+            .from('interview_sessions')
+            .insert({
+              user_id: user.id,
+              role_type: interviewConfig.role,
+              difficulty: interviewConfig.difficulty,
+              status: 'in_progress',
+              total_questions: questionCount,
+              completed_questions: 0,
+            })
+            .select()
+            .single();
+          if (sessionError) console.error('Failed to create session:', sessionError);
+          else sessionIdRef.current = sessionData.id;
+        }
+
+        const { data, error: fnError } = await supabase.functions.invoke('generate-interview-questions', {
+          body: {
+            role: interviewConfig.role,
+            language: interviewConfig.language,
+            difficulty: interviewConfig.difficulty,
+            persona: interviewConfig.interviewer,
+            questionCount,
+            previousQuestions: previousQuestions.slice(-40),
+            seed: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          },
+        });
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
+
+        const list: InterviewQuestion[] = data.questions || [];
+        if (!list.length) throw new Error('No questions were generated');
+        questionsRef.current = list;
+        setQuestions(list);
+
+        try {
+          const merged = [...previousQuestions, ...list.map((q) => q.question)].slice(-60);
+          localStorage.setItem(askedKey, JSON.stringify(merged));
+        } catch {
+          /* variety still handled by the seed */
+        }
+
+        setIsInterviewActive(true);
+        setCurrentQuestion(0);
+        setIsLoading(false);
+
+        const intro = INTRO[interviewConfig.interviewer](interviewConfig.role);
+        await conversation.start(`${intro} ${list[0].question}`);
+      } catch (err) {
+        console.error('Failed to start interview:', err);
+        setError(err instanceof Error ? err.message : 'Failed to start interview');
+        toast.error('Failed to start interview. Please try again.');
+        setIsLoading(false);
+      }
+    },
+    [user?.id, conversation],
+  );
+
+  const endInterview = useCallback(async () => {
+    conversation.stop();
+    setIsInterviewActive(false);
+    await completeSession();
+  }, [conversation, completeSession]);
 
   return {
     isLoading,
-    isAISpeaking,
-    isUserSpeaking,
-    currentQuestion,
-    questions,
-    transcript,
-    currentUserTranscript,
-    interimTranscript,
-    analyses,
-    startInterview,
-    startListening,
-    stopListening,
-    submitAnswer,
-    nextQuestion,
-    endInterview,
+    error,
+    status: conversation.status as ConversationStatus,
+    isAISpeaking: conversation.isSpeaking,
+    isUserSpeaking: conversation.isListening,
+    isPaused: conversation.isPaused,
+    liveText: conversation.liveText,
+    isSupported: conversation.isSupported,
     isInterviewActive,
+    isFinished,
+    questions,
+    currentQuestion,
+    transcript,
+    analyses,
     config,
-    error
+    startInterview,
+    endInterview,
   };
 }
