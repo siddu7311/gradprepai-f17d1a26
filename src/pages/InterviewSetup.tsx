@@ -29,7 +29,7 @@ import { GlassCard } from '@/components/ui/GlassCard';
 import { GlowButton } from '@/components/ui/GlowButton';
 import { Footer } from '@/components/layout/Footer';
 import { Helmet } from 'react-helmet-async';
-import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useAIVoice } from '@/hooks/useAIVoice';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useAuth } from '@/contexts/AuthContext';
 import { UpgradeModal } from '@/components/ui/UpgradeModal';
@@ -68,16 +68,16 @@ const questionCountOptions = [
 const interviewers = [
   { 
     id: 'amds', 
-    name: 'AMDS', 
+    name: 'SIDDU', 
     description: 'Male AI Interviewer', 
-    personality: 'Professional, direct, technical-focused',
+    personality: 'Warm, professional Indian voice — direct and technical',
     avatar: '👨‍💼'
   },
   { 
     id: 'lusy', 
     name: 'LUSY', 
     description: 'Female AI Interviewer', 
-    personality: 'Friendly, encouraging, thorough',
+    personality: 'Sweet, encouraging Indian voice — friendly and thorough',
     avatar: '👩‍💼'
   },
 ];
@@ -100,7 +100,7 @@ export default function InterviewSetup() {
   const [upgradeFeature, setUpgradeFeature] = useState('');
   const [interviewCount, setInterviewCount] = useState(0);
   
-  const { speak, isSpeaking, cancel } = useSpeechSynthesis();
+  const { speak, isSpeaking, cancel } = useAIVoice();
 
   // Fetch interview count for the current month
   useEffect(() => {
@@ -128,18 +128,32 @@ export default function InterviewSetup() {
   
   const previewVoice = (interviewerId: 'amds' | 'lusy') => {
     cancel();
-    const text = interviewerId === 'amds' 
-      ? "Hello, I'm AMDS. I'll be conducting your technical interview today."
-      : "Hi there! I'm LUSY, and I'm excited to chat with you about your experience!";
-    const settings = interviewerId === 'amds'
-      ? { pitch: 0.9, rate: 1.0, voice: 'male' as const }
-      : { pitch: 1.1, rate: 0.95, voice: 'female' as const };
-    speak(text, settings);
+    const text = interviewerId === 'amds'
+      ? "Hey there, I am Siddu, your interviewer. Let's start our interview whenever you are ready."
+      : "Hey there, I am Lusy, your interviewer. Let's start our interview whenever you are ready.";
+    void speak(text, { persona: interviewerId === 'amds' ? 'siddu' : 'lusy', speed: 0.97 });
   };
 
   const showUpgrade = (feature: string) => {
     setUpgradeFeature(feature);
     setShowUpgradeModal(true);
+  };
+
+  const beginInterview = (interviewer: 'amds' | 'lusy') => {
+    cancel();
+    if (!canStartInterview) {
+      showUpgrade('Unlimited interviews');
+      return;
+    }
+    navigate('/interview/room', {
+      state: {
+        role: roles.find((r) => r.id === selection.role)?.name || selection.role,
+        language: selection.language,
+        difficulty: selection.difficulty,
+        questionCount: selection.questionCount,
+        interviewer,
+      },
+    });
   };
 
   const handleNext = () => {
@@ -487,7 +501,7 @@ export default function InterviewSetup() {
                     Choose Your AI Interviewer
                   </h1>
                   <p className="text-muted-foreground">
-                    Select the interviewer persona you'd like to practice with
+                    Tap an interviewer — they will greet you and start the interview right away
                   </p>
                 </div>
 
@@ -502,7 +516,10 @@ export default function InterviewSetup() {
                           ? 'border-2 border-primary shadow-glow' 
                           : 'border border-glass-border/30 hover:border-primary/50'
                       }`}
-                      onClick={() => setSelection({ ...selection, interviewer: int.id })}
+                      onClick={() => {
+                        setSelection({ ...selection, interviewer: int.id });
+                        beginInterview(int.id as 'amds' | 'lusy');
+                      }}
                     >
                       <div className="text-6xl mb-4">{int.avatar}</div>
                       <h3 className="font-display text-2xl font-bold gradient-text mb-2">

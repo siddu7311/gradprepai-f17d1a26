@@ -12,6 +12,7 @@ const VOICES: Record<string, string> = {
   lusy: "coral",
   male: "onyx",
   amds: "onyx",
+  siddu: "onyx",
 };
 
 serve(async (req) => {
@@ -48,8 +49,8 @@ serve(async (req) => {
 
     const voice = VOICES[persona] ?? VOICES.female;
     const instructions = voice === "coral"
-      ? "Speak in a warm, sweet, friendly young woman's voice. Very clear articulation, natural pacing, gentle and encouraging. Pronounce names exactly as written."
-      : "Speak in a calm, confident, professional man's voice. Very clear articulation and steady pacing. Pronounce names exactly as written.";
+      ? "Speak as a warm, sweet young Indian woman with a natural, polished Indian English accent. Very clear articulation, gentle friendly tone, unhurried natural pacing, softly encouraging. Never spell names letter by letter — say them as words. Match the language of the text you are given (Hindi, Telugu, Tamil, Hinglish, English, etc.) and pronounce it like a native speaker."
+      : "Speak as a calm, confident young Indian man with a natural, polished Indian English accent. Warm and friendly but professional, very clear articulation, steady natural pacing. Never spell names letter by letter — say them as words. Match the language of the text you are given (Hindi, Telugu, Tamil, Hinglish, English, etc.) and pronounce it like a native speaker.";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/audio/speech", {
       method: "POST",

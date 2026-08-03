@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type VoicePersona = 'amds' | 'lusy' | 'male' | 'female';
+export type VoicePersona = 'amds' | 'siddu' | 'lusy' | 'male' | 'female';
 
 interface SpeakOptions {
   persona?: VoicePersona;
@@ -21,7 +21,8 @@ interface UseAIVoiceResult {
  */
 export function humanizeForSpeech(text: string): string {
   return text
-    .replace(/\bAMDS\b/g, 'Amdis')
+    .replace(/\bSIDDU\b/g, 'Siddu')
+    .replace(/\bAMDS\b/g, 'Siddu')
     .replace(/\bLUSY\b/g, 'Lucy')
     .replace(/\bA\.M\.D\.S\.?\b/g, 'Amdis');
 }
@@ -36,8 +37,8 @@ const browserFallback = (text: string, persona: VoicePersona, onEnd: () => void)
   const voices = window.speechSynthesis.getVoices().filter((v) => v.lang.startsWith('en'));
   const wantFemale = persona === 'lusy' || persona === 'female';
   const pattern = wantFemale
-    ? /female|woman|samantha|victoria|karen|zira|hazel|aria|jenny|emma|lily|natasha/i
-    : /male|man|daniel|alex|david|george|mark|guy|ryan|thomas/i;
+    ? /india|heera|kalpana|veena|neerja|female|woman|samantha|victoria|karen|zira|hazel|aria|jenny|emma|lily|natasha/i
+    : /india|ravi|hemant|prabhat|male|man|daniel|alex|david|george|mark|guy|ryan|thomas/i;
   utterance.voice = voices.find((v) => pattern.test(v.name)) || voices[0] || null;
   utterance.pitch = wantFemale ? 1.15 : 0.95;
   utterance.rate = 0.98;
