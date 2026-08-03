@@ -71,7 +71,12 @@ Grading rules (follow exactly):
 - If the answer is empty, off-topic, filler ("um", "I don't know", "next"), or unrelated to the question, score 0-1 and say so plainly.
 - Partially correct but shallow answers score 3-5. Solid answers score 6-8. Only genuinely complete, accurate, well-reasoned answers score 9-10.
 - The answer is a speech transcript, so ignore punctuation, filler words and small transcription errors; judge the substance.
-- Never give a score at random or as encouragement. Scores must be justified by the quoted answer.`;
+- Never give a score at random or as encouragement. Scores must be justified by the quoted answer.
+
+Spoken-conversation rules for the "feedback" field:
+- Write the feedback in the SAME language and script the candidate answered in (English, Hindi, Telugu, Tamil, Hinglish, etc.). Mirror their mix if they mix.
+- It will be read aloud by a voice interviewer, so keep it to 1-2 short, natural spoken sentences. No markdown, no lists, no emoji.
+- Sound like a warm Indian interviewer talking to the candidate directly ("you"), then stop — the next question is added separately.`;
 
     const userPrompt = `You are analyzing a candidate's response for a ${role} position.
 
