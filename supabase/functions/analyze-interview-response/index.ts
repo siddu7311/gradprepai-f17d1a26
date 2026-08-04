@@ -96,6 +96,7 @@ Provide a JSON response with:
   "problemSolvingScore": <number 0-10 reasoning and approach>,
   "confidenceScore": <number 0-10 decisiveness, based only on what was said>,
   "feedback": "<brief spoken feedback to give the candidate>",
+  "idealAnswer": "<a model answer to this question in clear English, 3-6 sentences, covering the key points a strong candidate would mention>",
   "strengths": ["<strength1>", "<strength2>"],
   "improvements": ["<improvement1>", "<improvement2>"],
   "topicsCovered": ["<topic1>", "<topic2>"],

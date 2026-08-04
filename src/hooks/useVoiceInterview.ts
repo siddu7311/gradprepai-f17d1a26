@@ -32,6 +32,7 @@ interface ResponseAnalysis {
   strengths: string[];
   improvements: string[];
   topicsCovered: string[];
+  idealAnswer?: string;
   communicationScore?: number;
   problemSolvingScore?: number;
   confidenceScore?: number;
@@ -144,6 +145,7 @@ export function useVoiceInterview() {
             user_answer: answer,
             score: scorePercent,
             feedback: data.feedback,
+            ideal_answer: data.idealAnswer ?? null,
             strengths: data.strengths || [],
             weaknesses: data.improvements || [],
             technical_score: clamp(data.technicalScore, scorePercent),
