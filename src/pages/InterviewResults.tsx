@@ -14,6 +14,7 @@ import {
   Lightbulb,
   Award,
   AlertCircle
+  FileText,
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
 import { GlassCard } from '@/components/ui/GlassCard';
