@@ -13,7 +13,7 @@ import {
   Target,
   Lightbulb,
   Award,
-  AlertCircle
+  AlertCircle,
   FileText,
 } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
