@@ -123,6 +123,45 @@ export default function InterviewResults() {
       });
   };
 
+  /** Plain-text interview notes: every question, the user's answer and a model answer. */
+  const handleDownloadNotes = () => {
+    const lines: string[] = [
+      'GradPrep AI — Interview Notes',
+      '='.repeat(40),
+      `Role: ${session?.role_type || '—'}`,
+      `Difficulty: ${session?.difficulty || '—'}`,
+      `Questions answered: ${answeredQuestions.length} / ${results.length || session?.total_questions || 0}`,
+      `Overall score: ${overallScore}%`,
+      `Date: ${new Date().toLocaleString()}`,
+      '',
+    ];
+
+    results.forEach((result) => {
+      lines.push(
+        `Q${result.question_number}. ${result.question_text}`,
+        '',
+        `Your answer: ${result.user_answer?.trim() || '(no answer given)'}`,
+        '',
+        `Correct / model answer: ${result.ideal_answer?.trim() || 'Not available for this question.'}`,
+        '',
+        `Score: ${result.score ?? 0}%`,
+        `Feedback: ${result.feedback?.trim() || '—'}`,
+      );
+      if (result.strengths?.length) lines.push(`Strengths: ${result.strengths.join('; ')}`);
+      if (result.weaknesses?.length) lines.push(`To improve: ${result.weaknesses.join('; ')}`);
+      lines.push('', '-'.repeat(40), '');
+    });
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `interview-notes-${session?.role_type || 'session'}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Interview notes downloaded');
+  };
+
   useEffect(() => {
     const fetchResults = async () => {
       if (!user) {
@@ -275,6 +314,10 @@ export default function InterviewResults() {
                 <GlowButton variant="outline" size="sm" onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
+                </GlowButton>
+                <GlowButton variant="outline" size="sm" onClick={handleDownloadNotes}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Notes (.txt)
                 </GlowButton>
               </div>
             </div>
