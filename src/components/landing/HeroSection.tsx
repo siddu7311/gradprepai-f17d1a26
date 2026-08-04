@@ -67,7 +67,7 @@ export const HeroSection = () => {
           >
             {user ? (
               <>
-                <Link to="/interview-setup">
+                <Link to="/interview/setup">
                   <GlowButton size="lg" className="min-w-[200px]">
                     Start Interview
                     <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />

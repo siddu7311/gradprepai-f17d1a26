@@ -6,7 +6,7 @@ import { Input } from './input';
 import { Label } from './label';
 import { useSubscription, PLANS, PAYMENT_WHATSAPP_NUMBER } from '@/hooks/useSubscription';
 import { useToast } from '@/hooks/use-toast';
-import qrAsset from '@/assets/phonepe-qr.jpeg.asset.json';
+import qrAsset from '@/assets/phonepe-qr-code.png.asset.json';
 
 interface UpiPaymentModalProps {
   isOpen: boolean;
@@ -150,13 +150,12 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ type: 'spring', stiffness: 220, damping: 20 }}
-                      className="mx-auto w-[190px] rounded-2xl bg-white p-2 shadow-glow"
+                      className="mx-auto w-[230px] rounded-2xl bg-white p-3 shadow-glow"
                     >
                       <img
                         src={qrAsset.url}
                         alt="PhonePe UPI QR code to pay ₹199 for GradPrep AI Pro"
-                        className="w-full aspect-square object-cover object-center rounded-xl"
-                        loading="lazy"
+                        className="w-full aspect-square object-contain bg-white rounded-xl"
                       />
                     </motion.div>
 
