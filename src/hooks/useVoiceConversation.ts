@@ -21,14 +21,12 @@ const PAUSE_RE =
   /\b(stop|pause|hold on|hold up|wait|one (sec|second|minute)|ek (minute|second)|ruko|rukiye|thodi der)\b/i;
 const RESUME_RE =
   /\b(continue|resume|carry on|go ahead|go on|start again|next question|i'?m ready|ready now|chalo|shuru)\b/i;
+/** Said while the agent is talking, these cut it off immediately (barge-in). */
+const INTERRUPT_RE =
+  /\b(lusy|lucy|siddu|sidhu|amds)?\s*(stop|wait|pause|hold on|ruko|one second|repeat|say (that )?again|repeat the question)\b/i;
 
-/**
- * Hands-free two-way voice conversation: the user taps the mic once, the
- * assistant introduces itself and then keeps taking turns automatically —
- * listening, waiting for a natural pause, replying out loud and listening again.
- */
 export function useVoiceConversation(options: UseVoiceConversationOptions) {
-  const { persona, silenceMs = 2000 } = options;
+  const { silenceMs = 1800 } = options;
 
   const [status, setStatus] = useState<ConversationStatus>('idle');
   const [isActive, setIsActive] = useState(false);
@@ -36,10 +34,14 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
   const optionsRef = useRef(options);
   optionsRef.current = options;
+  const personaRef = useRef<VoicePersona>(options.persona);
+  personaRef.current = options.persona;
 
   const activeRef = useRef(false);
   const pausedRef = useRef(false);
   const busyRef = useRef(false);
+  const speakingRef = useRef(false);
+  const lastSpokenRef = useRef('');
   const bufferRef = useRef('');
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -47,6 +49,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
   const wasSpeakingRef = useRef(false);
 
   const { speak, cancel, isSpeaking } = useAIVoice();
+  speakingRef.current = isSpeaking;
 
   const clearSilenceTimer = () => {
     if (silenceTimerRef.current) {
@@ -62,12 +65,26 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
   const handleResult = useCallback(
     (text: string) => {
-      if (!activeRef.current || busyRef.current) return;
+      if (!activeRef.current) return;
+
+      // While the agent is talking, only listen for an interrupt ("lusy stop").
+      if (speakingRef.current) {
+        const echo = lastSpokenRef.current.toLowerCase().includes(text.trim().toLowerCase());
+        if (!echo && INTERRUPT_RE.test(text)) {
+          cancel();
+          bufferRef.current = '';
+          setLiveText('');
+          setStatus('listening');
+        }
+        return;
+      }
+
+      if (busyRef.current) return;
       bufferRef.current = `${bufferRef.current} ${text}`.trim();
       setLiveText(bufferRef.current);
       scheduleTurn();
     },
-    [scheduleTurn],
+    [cancel, scheduleTurn],
   );
 
   const {
@@ -81,7 +98,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
   // Keep the turn alive while the user is still mid-sentence.
   useEffect(() => {
-    if (interimTranscript && activeRef.current && !busyRef.current) scheduleTurn();
+    if (interimTranscript && activeRef.current && !busyRef.current && !speakingRef.current) scheduleTurn();
   }, [interimTranscript, scheduleTurn]);
 
   const beginListening = useCallback(() => {
@@ -96,13 +113,17 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
   const say = useCallback(
     async (text: string) => {
       if (!text) return;
-      stopRecognition();
       clearSilenceTimer();
+      bufferRef.current = '';
+      setLiveText('');
+      lastSpokenRef.current = text;
       optionsRef.current.onAssistantSpeech?.(text);
       setStatus('speaking');
-      await speak(text, { persona, speed: 0.97 });
+      // The mic stays on so the user can cut in with "lusy stop".
+      if (activeRef.current && isSupported) startRecognition();
+      await speak(text, { persona: personaRef.current, speed: 1 });
     },
-    [persona, speak, stopRecognition],
+    [speak, isSupported, startRecognition],
   );
 
   // When the assistant finishes speaking, hand the mic back automatically.
@@ -118,7 +139,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
     if (wasSpeaking && !isSpeaking && activeRef.current && !busyRef.current) {
       resumeTimerRef.current = setTimeout(() => {
         if (activeRef.current && !busyRef.current) beginListening();
-      }, 600);
+      }, 250);
     }
   }, [isSpeaking, beginListening]);
 
@@ -156,7 +177,6 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
       }
 
       busyRef.current = true;
-      stopRecognition();
       setStatus('thinking');
       optionsRef.current.onUserSpeech?.(text);
       try {
@@ -166,7 +186,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
       } catch (err) {
         console.error('[voice-conversation] reply failed', err);
         busyRef.current = false;
-        if (activeRef.current) await say("Sorry, I missed that. Could you say it once more?");
+        if (activeRef.current) await say('Sorry, I missed that. Could you say it once more?');
       }
     })();
   };
