@@ -23,7 +23,7 @@ const buildReceipt = (params: {
   expiresAt?: string;
 }) => {
   const lines = [
-    '*GradPrep AI — Payment Receipt*',
+    '*GradPrep AI — Payment Verification Request*',
     '',
     `Plan: Pro (Monthly)`,
     `Amount: ₹${PLANS.PRO.price}`,
@@ -35,7 +35,7 @@ const buildReceipt = (params: {
     params.expiresAt ? `Valid till: ${new Date(params.expiresAt).toLocaleDateString()}` : '',
     `Date: ${new Date().toLocaleString()}`,
     '',
-    'Pro access has been activated. Thank you!',
+    'Pro access activates after the payment is verified. Thank you!',
   ];
   return lines.filter(Boolean).join('\n');
 };
@@ -149,7 +149,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                       Resend receipt on WhatsApp
                     </GlowButton>
                     <GlowButton className="w-full" onClick={handleClose}>
-                      Start using Pro
+                      Close
                     </GlowButton>
                   </div>
                 ) : (
