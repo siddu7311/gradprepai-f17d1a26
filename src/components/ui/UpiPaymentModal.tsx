@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Crown, Check, Loader2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { X, Crown, Loader2, MessageCircle, ShieldCheck } from 'lucide-react';
+import { Button } from './button';
 import { GlowButton } from './GlowButton';
 import { Input } from './input';
 import { Label } from './label';
@@ -44,7 +45,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
   const { toast } = useToast();
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ receipt: string } | null>(null);
+  const [pendingReceipt, setPendingReceipt] = useState<string | null>(null);
 
   const sendWhatsApp = (receipt: string) => {
     const url = `https://wa.me/${PAYMENT_WHATSAPP_NUMBER}?text=${encodeURIComponent(receipt)}`;
@@ -64,9 +65,14 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
         paymentId: result?.payment_id,
         expiresAt: result?.expires_at,
       });
-      setDone({ receipt });
+      if (!result.success) {
+        setPendingReceipt(receipt);
+        sendWhatsApp(receipt);
+        toast({ title: 'Verification requested', description: 'Pro will activate only after the payment is verified.' });
+        return;
+      }
       sendWhatsApp(receipt);
-      toast({ title: 'Pro activated 🎉', description: 'Your account is now Pro. The receipt is being sent on WhatsApp.' });
+      toast({ title: 'Pro activated', description: 'Your verified payment activated Pro.' });
     } catch (error) {
       toast({
         title: 'Could not confirm payment',
@@ -80,7 +86,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
 
   const handleClose = () => {
     setPhone('');
-    setDone(null);
+    setPendingReceipt(null);
     onClose();
   };
 
@@ -103,40 +109,42 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
           >
             <div className="w-full max-w-md mx-auto">
               <div className="relative glass border border-primary/30 rounded-2xl p-6 md:p-8 shadow-glow bg-background">
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={handleClose}
                   aria-label="Close payment dialog"
-                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-4 top-4"
                 >
                   <X className="w-5 h-5" />
-                </button>
+                </Button>
 
                 <div className="text-center mb-5">
                   <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-3">
                     <Crown className="w-7 h-7 text-primary" />
                   </div>
                   <h2 className="font-display text-2xl font-bold text-foreground">
-                    {done ? 'Payment Confirmed' : 'Upgrade to Pro'}
+                    {pendingReceipt ? 'Verification Requested' : 'Upgrade to Pro'}
                   </h2>
                   <p className="text-muted-foreground text-sm mt-1">
-                    {done
-                      ? 'Pro is active on your account for the next 30 days.'
+                    {pendingReceipt
+                      ? 'Your request is pending payment verification.'
                       : feature
                         ? <>Pay <span className="text-primary font-semibold">₹{PLANS.PRO.price}</span> to unlock {feature}</>
                         : <>Scan &amp; pay <span className="text-primary font-semibold">₹{PLANS.PRO.price}</span> / month</>}
                   </p>
                 </div>
 
-                {done ? (
+                {pendingReceipt ? (
                   <div className="space-y-4">
                     <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/30">
-                      <Check className="w-5 h-5 text-primary shrink-0" />
-                      <span className="text-sm text-foreground">Pro features unlocked instantly</span>
+                      <ShieldCheck className="w-5 h-5 text-primary shrink-0" />
+                      <span className="text-sm text-foreground">Pro activates after a verified payment</span>
                     </div>
                     <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/40 rounded-xl p-4 max-h-48 overflow-y-auto">
-                      {done.receipt}
+                      {pendingReceipt}
                     </pre>
-                    <GlowButton variant="outline" className="w-full" onClick={() => sendWhatsApp(done.receipt)}>
+                    <GlowButton variant="outline" className="w-full" onClick={() => sendWhatsApp(pendingReceipt)}>
                       <MessageCircle className="w-4 h-4 mr-2" />
                       Resend receipt on WhatsApp
                     </GlowButton>
@@ -162,7 +170,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                     <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
                       <li>Scan the QR with PhonePe, GPay, Paytm or any UPI app.</li>
                       <li>Pay ₹{PLANS.PRO.price} to DARA SUDHARSHAN.</li>
-                      <li>Tap the button below — Pro activates instantly.</li>
+                       <li>Request verification after completing the payment.</li>
                     </ol>
 
                     <div className="space-y-2">
@@ -181,7 +189,7 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
 
                     <GlowButton className="w-full animate-glow-pulse" onClick={handleSubmit} disabled={submitting}>
                       {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
-                      {submitting ? 'Activating Pro…' : "Payment done — Activate Pro"}
+                       {submitting ? 'Submitting…' : 'Request payment verification'}
                     </GlowButton>
                   </div>
                 )}

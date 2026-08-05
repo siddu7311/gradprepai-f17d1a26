@@ -25,6 +25,8 @@ export const PAYMENT_WHATSAPP_NUMBER = "917330976371";
 
 export interface UpiPaymentResult {
   success: boolean;
+  pending?: boolean;
+  message?: string;
   payment_id: string;
   email: string;
   amount: number;
@@ -119,7 +121,7 @@ export const useSubscription = () => {
     if (error) throw error;
     if (data?.error) throw new Error(data.error);
 
-    await checkSubscription();
+    if (data?.success) await checkSubscription();
     return data as UpiPaymentResult;
   };
 

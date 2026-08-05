@@ -41,6 +41,7 @@ export default function VerifyEmail() {
         if (session?.user?.email) {
           setUserEmail(session.user.email);
         }
+        sessionStorage.removeItem('gradprep-pending-email');
         return;
       }
 
@@ -48,7 +49,7 @@ export default function VerifyEmail() {
       if (user) {
         setUserEmail(user.email || null);
         // In Supabase, if auto-confirm is disabled, email_confirmed_at will be null until confirmed
-        const emailConfirmed = user.email_confirmed_at !== null;
+        const emailConfirmed = Boolean(user.email_confirmed_at);
         setIsVerified(emailConfirmed);
       }
       
@@ -59,7 +60,7 @@ export default function VerifyEmail() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUserEmail(session.user.email || null);
-        const emailConfirmed = session.user.email_confirmed_at !== null;
+        const emailConfirmed = Boolean(session.user.email_confirmed_at);
         setIsVerified(emailConfirmed);
         setIsVerifying(false);
       }
