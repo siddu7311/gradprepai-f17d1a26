@@ -36,14 +36,11 @@ serve(async (req) => {
     // Amount and plan are fixed server-side — never trusted from the client.
     const amount = 199;
 
-    // Reference is generated server-side so users don't have to type a UTR.
-    const clientRef = String(body.upi_reference ?? "").trim();
-    const upiReference =
-      clientRef.length >= 6
-        ? clientRef
-        : `UPI-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
+    // A static QR cannot send a trusted payment confirmation to this function.
+    // Never create an approved payment from a user's button click.
+    const upiReference = `PENDING-${Date.now().toString(36).toUpperCase()}-${crypto.randomUUID().slice(0, 6).toUpperCase()}`;
 
-    // Re-use an already active subscription instead of stacking duplicates.
+    // Return any subscription that was previously verified by an administrator/provider.
     const { data: active } = await supabase
       .from("upi_payments")
       .select("id, starts_at, expires_at, upi_reference")
@@ -67,9 +64,6 @@ serve(async (req) => {
       });
     }
 
-    const startsAt = new Date();
-    const expiresAt = new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
-
     const { data, error } = await supabase
       .from("upi_payments")
       .insert({
@@ -80,9 +74,9 @@ serve(async (req) => {
         plan: "pro",
         upi_reference: upiReference,
         payer_phone: payerPhone,
-        status: "approved",
-        starts_at: startsAt.toISOString(),
-        expires_at: expiresAt.toISOString(),
+        status: "pending",
+        starts_at: new Date().toISOString(),
+        expires_at: new Date().toISOString(),
       })
       .select()
       .single();
@@ -92,10 +86,12 @@ serve(async (req) => {
       return json({ error: error.message }, 500);
     }
 
-    console.log("[SUBMIT-UPI-PAYMENT] Pro activated", { userId: user.id, id: data.id });
+    console.log("[SUBMIT-UPI-PAYMENT] Verification requested", { userId: user.id, id: data.id });
 
     return json({
-      success: true,
+      success: false,
+      pending: true,
+      message: "Payment verification is pending. Pro has not been activated.",
       payment_id: data.id,
       email: user.email,
       amount,

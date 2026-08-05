@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Sparkles, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
@@ -16,10 +16,15 @@ export default function VerifyEmail() {
   const [isResending, setIsResending] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
+    const stateEmail = (location.state as { email?: string } | null)?.email;
+    const pendingEmail = stateEmail || sessionStorage.getItem('gradprep-pending-email');
+    if (pendingEmail) setUserEmail(pendingEmail);
+
     const checkVerification = async () => {
       // Check URL hash for email confirmation tokens
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -36,6 +41,7 @@ export default function VerifyEmail() {
         if (session?.user?.email) {
           setUserEmail(session.user.email);
         }
+        sessionStorage.removeItem('gradprep-pending-email');
         return;
       }
 
@@ -43,7 +49,7 @@ export default function VerifyEmail() {
       if (user) {
         setUserEmail(user.email || null);
         // In Supabase, if auto-confirm is disabled, email_confirmed_at will be null until confirmed
-        const emailConfirmed = user.email_confirmed_at !== null;
+        const emailConfirmed = Boolean(user.email_confirmed_at);
         setIsVerified(emailConfirmed);
       }
       
@@ -54,7 +60,7 @@ export default function VerifyEmail() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUserEmail(session.user.email || null);
-        const emailConfirmed = session.user.email_confirmed_at !== null;
+        const emailConfirmed = Boolean(session.user.email_confirmed_at);
         setIsVerified(emailConfirmed);
         setIsVerifying(false);
       }
@@ -63,7 +69,7 @@ export default function VerifyEmail() {
     checkVerification();
 
     return () => subscription.unsubscribe();
-  }, [user]);
+  }, [user, location.state]);
 
   const handleResendVerification = async () => {
     if (!userEmail) {

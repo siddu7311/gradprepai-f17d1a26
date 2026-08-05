@@ -25,6 +25,9 @@ const RESUME_RE =
 const INTERRUPT_RE =
   /\b(lusy|lucy|siddu|sidhu|amds)?\s*(stop|wait|pause|hold on|ruko|one second|repeat|say (that )?again|repeat the question)\b/i;
 
+const stripInterrupt = (text: string) =>
+  text.replace(INTERRUPT_RE, '').replace(/^[,.;:\s-]+/, '').trim();
+
 export function useVoiceConversation(options: UseVoiceConversationOptions) {
   const { silenceMs = 1800 } = options;
 
@@ -72,9 +75,11 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
         const echo = lastSpokenRef.current.toLowerCase().includes(text.trim().toLowerCase());
         if (!echo && INTERRUPT_RE.test(text)) {
           cancel();
-          bufferRef.current = '';
-          setLiveText('');
+          const command = stripInterrupt(text);
+          bufferRef.current = command;
+          setLiveText(command);
           setStatus('listening');
+          if (command) scheduleTurn();
         }
         return;
       }
@@ -98,8 +103,18 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
   // Keep the turn alive while the user is still mid-sentence.
   useEffect(() => {
-    if (interimTranscript && activeRef.current && !busyRef.current && !speakingRef.current) scheduleTurn();
-  }, [interimTranscript, scheduleTurn]);
+    if (!interimTranscript || !activeRef.current || busyRef.current) return;
+    if (speakingRef.current && INTERRUPT_RE.test(interimTranscript)) {
+      cancel();
+      const command = stripInterrupt(interimTranscript);
+      bufferRef.current = command;
+      setLiveText(command);
+      setStatus('listening');
+      if (command) scheduleTurn();
+      return;
+    }
+    if (!speakingRef.current) scheduleTurn();
+  }, [interimTranscript, scheduleTurn, cancel]);
 
   const beginListening = useCallback(() => {
     if (!activeRef.current || !isSupported) return;
@@ -164,10 +179,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
       if (isShort && PAUSE_RE.test(text)) {
         pausedRef.current = true;
-        await say(
-          optionsRef.current.pausedPhrase ??
-            "Sure, take your time. Just say continue whenever you're ready.",
-        );
+        setStatus('paused');
         return;
       }
 

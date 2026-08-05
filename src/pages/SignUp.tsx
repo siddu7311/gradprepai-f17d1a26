@@ -69,7 +69,8 @@ export default function SignUp() {
         description: "We've sent you a verification link to confirm your account.",
       });
       setIsLoading(false);
-      navigate('/verify-email');
+      sessionStorage.setItem('gradprep-pending-email', formData.email.trim().toLowerCase());
+      navigate('/verify-email', { state: { email: formData.email.trim().toLowerCase() } });
       return;
     }
     

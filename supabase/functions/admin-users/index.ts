@@ -110,10 +110,28 @@ serve(async (req) => {
 
     logStep("Users fetched", { total: data.total ?? users.length });
 
+    const [rolesResult, requestsResult, paymentsResult] = await Promise.all([
+      supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
+      supabase.from("enterprise_requests").select("*").order("created_at", { ascending: false }),
+      supabase.from("upi_payments").select("*").order("created_at", { ascending: false }),
+    ]);
+
+    const dataError = rolesResult.error || requestsResult.error || paymentsResult.error;
+    if (dataError) {
+      logStep("Admin data error", { message: dataError.message });
+      return new Response(JSON.stringify({ error: "Failed to load admin data" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      });
+    }
+
     return new Response(
       JSON.stringify({
         total: data.total ?? users.length,
         users,
+        roles: rolesResult.data ?? [],
+        enterpriseRequests: requestsResult.data ?? [],
+        payments: paymentsResult.data ?? [],
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

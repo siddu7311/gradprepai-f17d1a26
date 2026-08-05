@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const voice = VOICES[persona] ?? VOICES.female;
     const instructions = FEMALE_VOICES.has(voice)
-      ? "You are LUSY, a warm and sweet young Indian woman. Speak with a soft, melodious, friendly female voice and a natural polished Indian English accent. Very clear articulation, gentle smiling tone, relaxed conversational pacing, softly encouraging — like a caring friend talking one to one. Never sound robotic, never spell names letter by letter (say Lusy as 'Lucy', Siddu as a word). Match the language of the text you are given (Hindi, Telugu, Tamil, Hinglish, English, etc.) and pronounce it like a native speaker."
+      ? "You are LUSY, a warm young Indian woman with a sweet, clear and naturally expressive voice. Speak fluidly like a human conversation partner: gentle smiling tone, crisp articulation, natural pauses, no theatrical delivery, and no robotic cadence. Keep a polished Indian accent. Never spell names letter by letter (say Lusy as 'Lucy', Siddu as a word). Match the language of the text exactly and use native, confident pronunciation in every supported language."
       : "You are SIDDU, a calm, confident young Indian man. Speak with a clear male voice and a natural polished Indian English accent. Warm and friendly but professional, very clear articulation, steady conversational pacing. Never spell names letter by letter — say them as words. Match the language of the text you are given (Hindi, Telugu, Tamil, Hinglish, English, etc.) and pronounce it like a native speaker.";
 
     const speedValue = Math.min(1.3, Math.max(0.7, speed));
