@@ -90,47 +90,26 @@ const Admin = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch all user roles
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (rolesError) throw rolesError;
-
-      // Fetch all users (admin-only backend function)
+      // Load the complete admin snapshot through the protected backend boundary.
       const { data: usersPayload, error: usersError } = await supabase.functions.invoke('admin-users');
       if (usersError) throw usersError;
+      if (usersPayload?.error) throw new Error(String(usersPayload.error));
 
       const users = (usersPayload?.users || []) as Array<{ id: string; email: string | null }>;
       const total = typeof usersPayload?.total === 'number' ? usersPayload.total : users.length;
+      const rolesData = (usersPayload?.roles || []) as UserRole[];
+      const requestsData = (usersPayload?.enterpriseRequests || []) as EnterpriseRequest[];
+      const paymentsData = (usersPayload?.payments || []) as UpiPayment[];
 
       setAdminUsers(users);
       setTotalUsers(total);
       setProfiles(users.map((u) => ({ user_id: u.id, email: u.email, display_name: null })));
 
-      // Fetch enterprise requests
-      const { data: requestsData, error: requestsError } = await supabase
-        .from('enterprise_requests')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (requestsError) throw requestsError;
-
-      setEnterpriseRequests(requestsData || []);
-
-      // Fetch subscription payments (wallet)
-      const { data: paymentsData, error: paymentsError } = await supabase
-        .from('upi_payments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (paymentsError) throw paymentsError;
-
-      setPayments((paymentsData || []) as UpiPayment[]);
+      setEnterpriseRequests(requestsData);
+      setPayments(paymentsData);
 
       // Merge roles with email from users list
-      const rolesWithEmail = (rolesData || []).map((role) => {
+      const rolesWithEmail = rolesData.map((role) => {
         const u = users.find((x) => x.id === role.user_id);
         return {
           ...role,

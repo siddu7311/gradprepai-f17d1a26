@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Calendar, MessageCircle } from 'lucide-react';
+import { Calendar, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ScheduleManager from './ScheduleManager';
-import LusyChatbot from './LusyChatbot';
+import LusyVoiceAssistant from './LusyVoiceAssistant';
 import { useScheduleNotifications } from '@/hooks/useScheduleNotifications';
 
 const FloatingBubbles = () => {
@@ -36,7 +36,7 @@ const FloatingBubbles = () => {
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
             className="absolute bottom-28 right-0 w-80 sm:w-96"
           >
-            <LusyChatbot onClose={() => setActivePanel(null)} />
+            <LusyVoiceAssistant onClose={() => setActivePanel(null)} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -60,7 +60,7 @@ const FloatingBubbles = () => {
         <Calendar className="w-6 h-6" />
       </motion.button>
 
-      {/* LUSY Chat Bubble */}
+      {/* LUSY Voice Assistant Bubble */}
       <motion.button
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
@@ -76,7 +76,7 @@ const FloatingBubbles = () => {
             : '0 8px 24px -4px hsl(var(--background) / 0.3)'
         }}
       >
-        <MessageCircle className="w-6 h-6" />
+        <Mic className="w-6 h-6" />
       </motion.button>
     </div>
   );
