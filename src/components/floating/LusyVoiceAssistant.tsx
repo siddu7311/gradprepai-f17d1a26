@@ -38,7 +38,7 @@ export default function LusyVoiceAssistant({ onClose }: LusyVoiceAssistantProps)
 
   const voice = useVoiceConversation({
     persona: 'lusy',
-    silenceMs: 1600,
+    silenceMs: 1100,
     getReply,
   });
 
