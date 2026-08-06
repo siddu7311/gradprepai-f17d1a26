@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, Sparkles, ArrowLeft } from 'lucide-react';
 import { AnimatedBackground } from '@/components/ui/AnimatedBackground';
@@ -25,6 +25,9 @@ export default function SignIn() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const rawNext = searchParams.get('next');
+  const nextPath = rawNext && rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,12 +58,13 @@ export default function SignIn() {
     });
     
     setIsLoading(false);
-    navigate('/dashboard');
+    if (nextPath) window.location.href = nextPath;
+    else navigate('/dashboard');
   };
 
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
-    const redirectUrl = `${window.location.origin}/dashboard`;
+    const redirectUrl = `${window.location.origin}${nextPath ?? '/dashboard'}`;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
