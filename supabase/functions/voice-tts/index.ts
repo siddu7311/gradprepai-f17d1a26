@@ -9,14 +9,14 @@ const corsHeaders = {
 // Sweet, clear voices from the Lovable AI TTS model.
 // LUSY = warm, sweet young female voice. SIDDU = calm, confident male voice.
 const VOICES: Record<string, string> = {
-  female: "sage",
-  lusy: "sage",
+  female: "coral",
+  lusy: "coral",
   male: "onyx",
   amds: "onyx",
   siddu: "onyx",
 };
 
-const FEMALE_VOICES = new Set(["sage", "coral", "shimmer", "nova"]);
+const FEMALE_VOICES = new Set(["coral", "sage", "shimmer", "nova"]);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const voice = VOICES[persona] ?? VOICES.female;
     const instructions = FEMALE_VOICES.has(voice)
-      ? "You are LUSY, a warm young Indian woman with a sweet, clear and naturally expressive voice. Speak fluidly like a human conversation partner: gentle smiling tone, crisp articulation, natural pauses, no theatrical delivery, and no robotic cadence. Keep a polished Indian accent. Never spell names letter by letter (say Lusy as 'Lucy', Siddu as a word). Match the language of the text exactly and use native, confident pronunciation in every supported language."
+      ? "You are LUSY, a sweet, lovable young Indian woman. Voice: soft, warm and melodious with a gentle smile in it — affectionate and caring, like a close friend who is genuinely happy to talk to you. Slightly bright, higher-pitched and airy, never shrill, never breathy-whispery, never theatrical. Speak in light, flowing, natural sentences with soft consonants, warm vowels and gentle rising intonation at the end of questions. Keep a polished Indian accent and a calm, unhurried but efficient pace. Never spell names letter by letter (say Lusy as 'Lucy', Siddu as a word). Match the language of the text exactly and pronounce it like a native speaker."
       : "You are SIDDU, a calm, confident young Indian man. Speak with a clear male voice and a natural polished Indian English accent. Warm and friendly but professional, very clear articulation, steady conversational pacing. Never spell names letter by letter — say them as words. Match the language of the text you are given (Hindi, Telugu, Tamil, Hinglish, English, etc.) and pronounce it like a native speaker.";
 
     const speedValue = Math.min(1.3, Math.max(0.7, speed));

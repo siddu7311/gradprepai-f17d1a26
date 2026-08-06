@@ -188,7 +188,7 @@ export function useVoiceInterview() {
   const conversation = useVoiceConversation({
     persona: config?.interviewer === 'amds' ? 'siddu' : 'lusy',
     getReply,
-    silenceMs: 1600,
+    silenceMs: 1100,
     onUserSpeech: (text) => addToTranscript('user', text),
     onAssistantSpeech: (text) => addToTranscript('ai', text),
     pausedPhrase: "Sure, no problem — take your time. Just say continue when you're ready.",

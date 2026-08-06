@@ -29,7 +29,7 @@ const stripInterrupt = (text: string) =>
   text.replace(INTERRUPT_RE, '').replace(/^[,.;:\s-]+/, '').trim();
 
 export function useVoiceConversation(options: UseVoiceConversationOptions) {
-  const { silenceMs = 1800 } = options;
+  const { silenceMs = 1100 } = options;
 
   const [status, setStatus] = useState<ConversationStatus>('idle');
   const [isActive, setIsActive] = useState(false);
@@ -70,17 +70,25 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
     (text: string) => {
       if (!activeRef.current) return;
 
-      // While the agent is talking, only listen for an interrupt ("lusy stop").
+      // While the agent is talking, ANY real speech from the user cuts it off
+      // instantly (barge-in) — the user should never have to talk over the agent.
       if (speakingRef.current) {
         const echo = lastSpokenRef.current.toLowerCase().includes(text.trim().toLowerCase());
-        if (!echo && INTERRUPT_RE.test(text)) {
-          cancel();
-          const command = stripInterrupt(text);
-          bufferRef.current = command;
-          setLiveText(command);
-          setStatus('listening');
-          if (command) scheduleTurn();
+        if (echo || !text.trim()) return;
+        cancel();
+        const isStopOnly = INTERRUPT_RE.test(text);
+        const command = isStopOnly ? stripInterrupt(text) : text.trim();
+        bufferRef.current = command;
+        setLiveText(command);
+        if (isStopOnly && !command) {
+          // Pure "stop" — halt speech and wait for the user's instruction.
+          pausedRef.current = true;
+          setStatus('paused');
+          beginListeningRef.current();
+          return;
         }
+        setStatus('listening');
+        if (command) scheduleTurn();
         return;
       }
 
@@ -104,16 +112,15 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
   // Keep the turn alive while the user is still mid-sentence.
   useEffect(() => {
     if (!interimTranscript || !activeRef.current || busyRef.current) return;
-    if (speakingRef.current && INTERRUPT_RE.test(interimTranscript)) {
+    if (speakingRef.current) {
+      const echo = lastSpokenRef.current.toLowerCase().includes(interimTranscript.trim().toLowerCase());
+      if (echo) return;
+      // Stop the moment we hear the user, before the whole phrase arrives.
       cancel();
-      const command = stripInterrupt(interimTranscript);
-      bufferRef.current = command;
-      setLiveText(command);
       setStatus('listening');
-      if (command) scheduleTurn();
       return;
     }
-    if (!speakingRef.current) scheduleTurn();
+    scheduleTurn();
   }, [interimTranscript, scheduleTurn, cancel]);
 
   const beginListening = useCallback(() => {
@@ -124,6 +131,8 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
     startRecognition();
     setStatus(pausedRef.current ? 'paused' : 'listening');
   }, [isSupported, resetTranscript, startRecognition]);
+  const beginListeningRef = useRef(beginListening);
+  beginListeningRef.current = beginListening;
 
   const say = useCallback(
     async (text: string) => {
@@ -154,7 +163,7 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
     if (wasSpeaking && !isSpeaking && activeRef.current && !busyRef.current) {
       resumeTimerRef.current = setTimeout(() => {
         if (activeRef.current && !busyRef.current) beginListening();
-      }, 250);
+      }, 100);
     }
   }, [isSpeaking, beginListening]);
 
@@ -170,11 +179,14 @@ export function useVoiceConversation(options: UseVoiceConversationOptions) {
 
     void (async () => {
       if (pausedRef.current) {
-        if (RESUME_RE.test(text)) {
+        if (RESUME_RE.test(text) && words.length <= 6) {
           pausedRef.current = false;
           await say(optionsRef.current.resumedPhrase ?? "Perfect, let's continue where we left off.");
+          return;
         }
-        return;
+        // Anything else said while paused is a real instruction: answer it and resume.
+        if (words.length < 2) return;
+        pausedRef.current = false;
       }
 
       if (isShort && PAUSE_RE.test(text)) {
