@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.voice-tts]
 verify_jwt = false
+
+[functions.mcp]
+verify_jwt = false
