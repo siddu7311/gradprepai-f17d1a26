@@ -24,6 +24,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { useToast } from '@/hooks/use-toast';
 import { Helmet } from 'react-helmet-async';
+import { requestNotificationPermission } from '@/hooks/useScheduleNotifications';
 
 export default function Settings() {
   const { user, signOut } = useAuth();
@@ -113,6 +114,12 @@ export default function Settings() {
 
   const handleSaveNotifications = async () => {
     try {
+      if (notifications.push) {
+        const permission = await requestNotificationPermission();
+        if (permission !== 'granted') {
+          toast({ title: 'Browser notifications unavailable', description: 'Allow notifications in your browser settings to receive push reminders.', variant: 'destructive' });
+        }
+      }
       await updateProfile({
         notification_email: notifications.email,
         notification_push: notifications.push,
@@ -255,9 +262,11 @@ export default function Settings() {
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <Input
                           id="email"
-                          value={formData.email}
-                          disabled
-                          className="pl-10 bg-muted/50 opacity-70"
+                          type="email"
+                          value={user.email || ''}
+                          readOnly
+                          aria-readonly="true"
+                          className="pl-10 bg-muted/50"
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">Email cannot be changed</p>
@@ -313,6 +322,7 @@ export default function Settings() {
                         <p className="text-sm text-muted-foreground">Receive updates via email</p>
                       </div>
                       <Switch
+                        aria-label="Email Notifications"
                         checked={notifications.email}
                         onCheckedChange={(checked) => setNotifications({ ...notifications, email: checked })}
                       />
@@ -324,6 +334,7 @@ export default function Settings() {
                         <p className="text-sm text-muted-foreground">Browser push notifications</p>
                       </div>
                       <Switch
+                        aria-label="Push Notifications"
                         checked={notifications.push}
                         onCheckedChange={(checked) => setNotifications({ ...notifications, push: checked })}
                       />
@@ -335,6 +346,7 @@ export default function Settings() {
                         <p className="text-sm text-muted-foreground">Reminders to practice regularly</p>
                       </div>
                       <Switch
+                        aria-label="Interview Reminders"
                         checked={notifications.interview_reminders}
                         onCheckedChange={(checked) => setNotifications({ ...notifications, interview_reminders: checked })}
                       />
@@ -346,6 +358,7 @@ export default function Settings() {
                         <p className="text-sm text-muted-foreground">Weekly progress reports</p>
                       </div>
                       <Switch
+                        aria-label="Weekly Summary"
                         checked={notifications.weekly_summary}
                         onCheckedChange={(checked) => setNotifications({ ...notifications, weekly_summary: checked })}
                       />

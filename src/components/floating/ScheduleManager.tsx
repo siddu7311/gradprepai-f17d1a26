@@ -182,18 +182,18 @@ const ScheduleManager = ({ onClose }: ScheduleManagerProps) => {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden">
-      <div className="bg-primary/10 px-4 py-3 flex items-center justify-between">
+    <div role="dialog" aria-label="Schedule Manager" className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden flex flex-col max-h-[calc(100dvh-12rem)]">
+      <div className="bg-primary/10 px-4 py-3 flex shrink-0 items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="w-5 h-5 text-primary" />
           <h3 className="font-semibold text-foreground">Schedule Manager</h3>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
+        <Button variant="outline" size="icon" onClick={onClose} aria-label="Close schedule" title="Close schedule" className="shrink-0">
           <X className="w-4 h-4" />
         </Button>
       </div>
 
-      <div className="p-4">
+      <div className="p-4 overflow-y-auto min-h-0">
         {user && permission !== 'granted' && (
           <button
             type="button"

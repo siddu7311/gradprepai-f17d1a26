@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { useProfile } from '@/hooks/useProfile';
+import { canDeliverScheduleReminder } from '@/lib/notificationPreferences';
 
 interface ScheduleRow {
   id: string;
@@ -10,6 +12,7 @@ interface ScheduleRow {
   scheduled_at: string;
   reminder_minutes: number;
   notified: boolean;
+  event_type: string;
 }
 
 const SW_URL = '/notify-sw.js';
@@ -75,10 +78,13 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 /**
  * App-wide schedule reminder watcher. Runs on every page (not just when the
  * Schedule Manager panel is open) so reminders fire while the user is on
- * another tab or another app, as long as the browser is running.
+ * another tab or another app, as long as this website remains open.
  */
 export function useScheduleNotifications() {
   const { user } = useAuth();
+  const { profile } = useProfile();
+  const preferencesRef = useRef(profile);
+  preferencesRef.current = profile;
   const [permission, setPermission] = useState<NotificationPermission>(
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'denied',
   );
@@ -96,7 +102,11 @@ export function useScheduleNotifications() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    firedRef.current.clear();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user || !profile?.notification_push) return;
     let cancelled = false;
 
     getRegistration();
@@ -105,12 +115,14 @@ export function useScheduleNotifications() {
       const nowMs = Date.now();
       const { data, error } = await supabase
         .from('schedules')
-        .select('id, title, description, scheduled_at, reminder_minutes, notified')
+        .select('id, title, description, scheduled_at, reminder_minutes, notified, event_type')
+        .eq('user_id', user.id)
         .eq('notified', false);
 
       if (cancelled || error || !data) return;
 
       for (const schedule of data as ScheduleRow[]) {
+        if (cancelled || !canDeliverScheduleReminder(preferencesRef.current, schedule.event_type)) continue;
         const eventMs = new Date(schedule.scheduled_at).getTime();
         const leadMs = (schedule.reminder_minutes || 0) * 60_000;
         const dueAt = eventMs - leadMs;
@@ -118,7 +130,6 @@ export function useScheduleNotifications() {
         // Fire once the reminder window is reached, and skip stale events (> 1 day past).
         if (nowMs < dueAt || nowMs > eventMs + 86_400_000) continue;
         if (firedRef.current.has(schedule.id)) continue;
-        firedRef.current.add(schedule.id);
 
         const minutesUntil = Math.max(0, Math.round((eventMs - nowMs) / 60_000));
         const body =
@@ -127,9 +138,12 @@ export function useScheduleNotifications() {
             : `Starting now${schedule.description ? ` — ${schedule.description}` : ''}`;
 
         const shown = await showScheduleNotification(`Upcoming: ${schedule.title}`, body, schedule.id);
+        if (cancelled || !canDeliverScheduleReminder(preferencesRef.current, schedule.event_type)) continue;
         if (!shown && document.visibilityState === 'visible') {
           toast.info(`Upcoming: ${schedule.title}`, { description: body, duration: 10000 });
         }
+        if (!shown && document.visibilityState !== 'visible') continue;
+        firedRef.current.add(schedule.id);
 
         await supabase.from('schedules').update({ notified: true }).eq('id', schedule.id);
       }
@@ -155,7 +169,7 @@ export function useScheduleNotifications() {
       document.removeEventListener('visibilitychange', onVisible);
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user?.id, profile?.notification_push, profile?.notification_interview_reminders]);
 
   return { permission, enableNotifications };
 }

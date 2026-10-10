@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Github, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Sparkles, Github, Twitter, Linkedin, Mail, Youtube, Instagram } from 'lucide-react';
 
 const footerLinks = {
   Product: [
@@ -28,6 +28,8 @@ const socialLinks = [
   { icon: Github, href: '#', label: 'GitHub' },
   { icon: Linkedin, href: '#', label: 'LinkedIn' },
   { icon: Mail, href: 'mailto:sudharshan1932007@gmail.com', label: 'Email' },
+  { icon: Youtube, href: 'https://www.youtube.com/', label: 'YouTube' },
+  { icon: Instagram, href: 'https://www.instagram.com/', label: 'Instagram' },
 ];
 
 export const Footer = () => {
@@ -52,7 +54,7 @@ export const Footer = () => {
               AI-powered interview preparation platform helping graduates land their dream tech jobs.
             </p>
             {/* Social Links */}
-            <div className="flex gap-4">
+            <div className="flex flex-wrap gap-3">
               {socialLinks.map((social) => (
                 <motion.a
                   key={social.label}
@@ -60,6 +62,9 @@ export const Footer = () => {
                   whileHover={{ scale: 1.1, y: -2 }}
                   className="w-10 h-10 rounded-lg glass flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
                   aria-label={social.label}
+                  title={social.label}
+                  target={social.href.startsWith('https://') ? '_blank' : undefined}
+                  rel={social.href.startsWith('https://') ? 'noopener noreferrer' : undefined}
                 >
                   <social.icon className="w-5 h-5" />
                 </motion.a>
