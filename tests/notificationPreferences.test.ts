@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { canDeliverScheduleReminder } from './notificationPreferences';
+import { canDeliverScheduleReminder } from '../src/lib/notificationPreferences';
 
 describe('saved notification preferences', () => {
   test('push disabled suppresses all schedule notifications', () => {
