@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X, Crown, Loader2, MessageCircle, ShieldCheck } from 'lucide-react';
 import { Button } from './button';
 import { GlowButton } from './GlowButton';
@@ -91,34 +92,23 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={handleClose}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="fixed inset-2 md:inset-4 z-50 flex items-start md:items-center justify-center overflow-y-auto py-4"
-          >
-            <div className="w-full max-w-md mx-auto">
-              <div className="relative glass border border-primary/30 rounded-2xl p-6 md:p-8 shadow-glow bg-background">
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]" />
+        <DialogPrimitive.Content aria-describedby={undefined} className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[61] w-[calc(100vw-2rem)] max-w-md max-h-[calc(100dvh-2rem)] flex flex-col border border-primary/30 rounded-2xl shadow-glow bg-background overflow-hidden">
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-2">
+                <DialogPrimitive.Title className="font-display font-semibold text-foreground">Pro subscription</DialogPrimitive.Title>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="icon"
                   onClick={handleClose}
                   aria-label="Close payment dialog"
-                  className="absolute right-4 top-4"
+                  title="Close payment dialog"
                 >
                   <X className="w-5 h-5" />
                 </Button>
-
+              </div>
+              <div className="overflow-y-auto min-h-0 p-6 md:p-8">
                 <div className="text-center mb-5">
                   <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto mb-3">
                     <Crown className="w-7 h-7 text-primary" />
@@ -194,10 +184,8 @@ export const UpiPaymentModal = ({ isOpen, onClose, feature }: UpiPaymentModalPro
                   </div>
                 )}
               </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
