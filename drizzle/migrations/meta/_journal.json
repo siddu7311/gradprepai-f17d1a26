@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791651586386,
+      "tag": "0000_repair_policy_admin_checks_without_public_rpc_access",
+      "breakpoints": true
+    }
+  ]
+}
