@@ -6,3 +6,5 @@
 - [ ] Email updates and weekly report delivery: blocked on configuring an email delivery service and sender.
 - [x] Display the current account email in Profile Information.
 - [x] Verify signed-in settings saves/reload, popup dismissal, footer navigation, and notification rule tests.
+- [x] Audit the current backend and prepare a safe migration inventory and plan.
+- [ ] Migrate to the destination backend only after destination details, backup access, and explicit approval are available.
